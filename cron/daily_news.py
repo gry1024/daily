@@ -22,10 +22,37 @@ from backend.runtime import run_with_logging
 
 
 NEWS_RSS = [
-    ("https://sspai.com/feed", "sspai"),
-    ("https://sspai.com/index.xml", "sspai"),
-    ("https://rsshub.app/jiqizhixin", "jiqizhixin"),
-    ("https://rsshub.app/36kr/newsflash", "36kr"),
+    # Tier 1 — 一手官方 / 模型实验室
+    ("https://openai.com/news/rss.xml", "OpenAI"),
+    ("https://blogs.nvidia.com/feed/", "NVIDIA"),
+    ("https://qwenlm.github.io/blog/index.xml", "Qwen"),
+    ("https://machinelearning.apple.com/rss.xml", "Apple ML"),
+    ("https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml", "MIT News"),
+    # Tier 2 — 权威科技媒体 / newsletter
+    ("https://aws.amazon.com/blogs/machine-learning/feed/", "AWS ML"),
+    ("https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "The Verge"),
+    ("https://techcrunch.com/category/artificial-intelligence/feed/", "TechCrunch"),
+    ("https://arstechnica.com/ai/feed/", "Ars Technica"),
+    ("https://www.technologyreview.com/topic/artificial-intelligence/feed", "MIT Tech Review"),
+    ("https://www.wired.com/feed/tag/ai/latest/rss", "Wired"),
+    ("https://the-decoder.com/feed/", "The Decoder"),
+    ("https://www.marktechpost.com/feed/", "MarkTechPost"),
+    ("https://semianalysis.com/feed/", "SemiAnalysis"),
+    ("https://news.smol.ai/rss.xml", "smol.ai"),
+    ("https://simonwillison.net/atom/everything/", "Simon Willison"),
+    ("https://lilianweng.github.io/index.xml", "Lilian Weng"),
+    ("https://magazine.sebastianraschka.com/feed", "Sebastian Raschka"),
+    ("https://thegradient.pub/rss/", "The Gradient"),
+    ("https://jack-clark.net/feed/", "Jack Clark"),
+    ("https://www.interconnects.ai/feed", "Interconnects"),
+    ("https://www.latent.space/feed", "Latent Space"),
+    ("https://www.oneusefulthing.org/feed", "One Useful Thing"),
+    ("https://www.bensbites.com/feed", "Ben's Bites"),
+    # Tier 3 — 中文
+    ("https://www.qbitai.com/feed", "量子位"),
+    ("https://www.infoq.cn/feed", "InfoQ"),
+    ("https://sspai.com/feed", "少数派"),
+    ("https://www.ithome.com/rss/", "IT 之家"),
 ]
 
 
