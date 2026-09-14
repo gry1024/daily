@@ -1,5 +1,7 @@
 import { api } from '../api.js';
 import { escapeHTML } from '../app.js';
+import { store } from '../state.js';
+import { toast } from '../toast.js';
 
 const CATS = [
   { v: '', label: '全部' },
@@ -12,6 +14,7 @@ const CATS = [
 ];
 
 let currentCat = '';
+let showActiveOnly = true;
 
 function daysLeft(expire) {
   if (!expire) return null;
@@ -20,45 +23,122 @@ function daysLeft(expire) {
   return Math.max(0, Math.floor(diff));
 }
 
-export async function renderDeals(container, reset = true) {
-  if (reset) {
-    container.innerHTML = `
-      <div class="filter-bar">
-        ${CATS.map(c => `<button class="filter-chip ${currentCat === c.v ? 'active' : ''}" data-cat="${c.v}">${c.label}</button>`).join('')}
-      </div>
-      <div id="deals-list"></div>
-    `;
-    container.querySelectorAll('.filter-chip').forEach(b => {
-      b.addEventListener('click', () => { currentCat = b.dataset.cat; renderDeals(container, false); });
-    });
+function countdownClass(dl) {
+  if (dl === null) return '';
+  if (dl <= 1) return 'urgent';
+  if (dl <= 3) return 'urgent';
+  return '';
+}
+
+function renderItem(d) {
+  const dl = daysLeft(d.expire_date);
+  const claimed = store.saved.has('deals_claimed', d.url);
+  const expired = dl === 0;
+  let countdownHtml = '';
+  if (dl !== null) {
+    let txt, cls;
+    if (expired) { txt = '已过期'; cls = 'expired'; }
+    else if (dl === 0) { txt = '今天截止'; cls = 'urgent'; }
+    else if (dl === 1) { txt = '明天截止'; cls = 'urgent'; }
+    else if (dl <= 7) { txt = `${dl} 天后截止`; cls = 'urgent'; }
+    else { txt = `${dl} 天后截止`; cls = ''; }
+    countdownHtml = `<span class="countdown ${cls}">${txt}</span>`;
   }
-  const list = document.getElementById('deals-list');
-  list.innerHTML = '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div>';
-  const params = new URLSearchParams({ active_only: 'true' });
-  if (currentCat) params.set('category', currentCat);
-  const data = await api.get('/deals?' + params);
-  if (!data.items.length) {
-    list.innerHTML = `<div class="empty-state">
-      <div class="empty-state-title">今日暂无羊毛</div>
-      <div class="empty-state-desc">每天凌晨 5:00 抓取 · 过期的会自动下架</div>
-    </div>`;
-    return;
-  }
-  list.innerHTML = data.items.map(d => {
-    const dl = daysLeft(d.expire_date);
-    return `<div class="list-item">
-      <div class="list-item-title">
-        <a href="${escapeHTML(d.url)}" target="_blank" rel="noopener">${escapeHTML(d.title || '')}</a>
-        ${dl !== null ? `<span class="badge ${dl <= 3 ? 'badge-warning' : 'badge-success'}" style="margin-left:8px">${dl === 0 ? '今天截止' : dl + ' 天后截止'}</span>` : ''}
+  return `
+    <div class="list-item card-with-actions" data-url="${escapeHTML(d.url)}" style="position:relative">
+      <div class="card-actions">
+        <button class="action-btn ${claimed ? 'active' : ''}" data-action="claim" data-url="${escapeHTML(d.url)}" title="已领取">✓</button>
       </div>
+      ${claimed ? '<span class="item-status" style="color:var(--success)">✓ 已领取</span>' : ''}
+      <div class="list-item-title" style="padding-right:60px"><a href="${escapeHTML(d.url)}" target="_blank" rel="noopener">${escapeHTML(d.title || '')}</a> ${countdownHtml}</div>
       ${d.note ? `<div class="list-item-summary">${escapeHTML(d.note)}</div>` : ''}
       <div class="list-item-meta">
         ${d.category ? `<span class="badge">${escapeHTML(d.category)}</span>` : ''}
         ${d.requirements ? `<span>条件：${escapeHTML(d.requirements)}</span>` : ''}
-        <span>${escapeHTML(d.source || '')}</span>
+        ${d.source ? `<span>${escapeHTML(d.source)}</span>` : ''}
         ${d.publish_date ? `<span>发布 ${escapeHTML(d.publish_date)}</span>` : ''}
-        ${d.expire_date ? `<span>⏰ 至 ${escapeHTML(d.expire_date)}</span>` : ''}
       </div>
-    </div>`;
-  }).join('');
+    </div>
+  `;
+}
+
+function renderStats(items, claimedCount) {
+  const urgent = items.filter(d => {
+    const dl = daysLeft(d.expire_date);
+    return dl !== null && dl <= 7 && dl > 0;
+  }).length;
+  return `
+    <div class="stat-group">
+      <div class="stat-card">
+        <div class="stat-label">有效羊毛</div>
+        <div class="stat-value">${items.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">即将过期 (7天内)</div>
+        <div class="stat-value" style="color:var(--warning)">${urgent}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">已领取</div>
+        <div class="stat-value" style="color:var(--success)">${claimedCount}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFilters() {
+  return `
+    <div class="filter-bar">
+      ${CATS.map(c => `<button class="filter-chip ${currentCat === c.v ? 'active' : ''}" data-cat="${c.v}">${c.label}</button>`).join('')}
+      <span style="margin:0 4px;color:var(--fg-tertiary)">·</span>
+      <button class="filter-chip ${showActiveOnly ? 'active' : ''}" data-active="1">仅有效</button>
+      <button class="filter-chip ${!showActiveOnly ? 'active' : ''}" data-active="0">含过期</button>
+    </div>
+  `;
+}
+
+function bindEvents(container) {
+  container.querySelectorAll('[data-action="claim"]').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const added = store.saved.toggle('deals_claimed', b.dataset.url);
+      b.classList.toggle('active', added);
+      toast[added ? 'success' : 'info'](added ? '✓ 已标记领取' : '已取消');
+    });
+  });
+}
+
+export async function renderDeals(container) {
+  container.innerHTML = `
+    <div class="deals-stats"></div>
+    <div class="deals-filters"></div>
+    <div id="deals-list"></div>
+  `;
+  try {
+    const params = new URLSearchParams({ active_only: showActiveOnly });
+    if (currentCat) params.set('category', currentCat);
+    const data = await api.get('/deals?' + params);
+    const items = (data.items || []).sort((a, b) => {
+      // 按过期时间升序（先到期的在前）
+      const da = a.expire_date ? new Date(a.expire_date).getTime() : Infinity;
+      const db = b.expire_date ? new Date(b.expire_date).getTime() : Infinity;
+      return da - db;
+    });
+    const claimedCount = store.saved.list('deals_claimed').length;
+
+    container.querySelector('.deals-stats').innerHTML = renderStats(items, claimedCount);
+    container.querySelector('.deals-filters').innerHTML = renderFilters();
+    container.querySelector('#deals-list').innerHTML = items.length ? items.map(renderItem).join('') :
+      `<div class="empty-state"><div class="empty-state-title">今日暂无羊毛</div><div class="empty-state-desc">过期会自动下架</div></div>`;
+
+    bindEvents(container);
+
+    container.querySelectorAll('[data-cat]').forEach(b => {
+      b.addEventListener('click', () => { currentCat = b.dataset.cat; renderDeals(container); });
+    });
+    container.querySelectorAll('[data-active]').forEach(b => {
+      b.addEventListener('click', () => { showActiveOnly = b.dataset.active === '1'; renderDeals(container); });
+    });
+  } catch (e) {
+    container.innerHTML = `<div class="flash error">加载失败：${escapeHTML(e.message)}</div>`;
+  }
 }
