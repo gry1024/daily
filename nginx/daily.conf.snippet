@@ -1,0 +1,37 @@
+# AutoTreehole Daily · nginx 配置片段
+# 这个片段要插入到 /etc/nginx/sites-enabled/treehole 的 server 块里
+# 插入位置：在 location /api/ 之后、location / { 之前
+#
+# 注意：这是 _借路径_，不动树洞主项目 (/opt/treehole/)
+# AutoTreehole 主项目继续监听 :9000；Daily 后端监听 :8001
+#
+# 插入命令（SSH 到服务器后执行）：
+#   sudo cp /etc/nginx/sites-enabled/treehole /etc/nginx/sites-enabled/treehole.bak.$(date +%s)
+#   sudo python3 -c "
+#   content = open('/etc/nginx/sites-enabled/treehole').read()
+#   snippet = open('/home/groy/daily/nginx/daily.conf.snippet').read()
+#   # 在 'location / {' 之前插入
+#   new = content.replace('    location / {', snippet + '\n    location / {', 1)
+#   open('/etc/nginx/sites-enabled/treehole', 'w').write(new)
+#   "
+#   sudo nginx -t && sudo systemctl reload nginx
+
+    # ===== AutoTreehole Daily =====
+    location = /daily { return 301 /daily/; }
+
+    location /daily/ {
+        alias /home/groy/daily/frontend/;
+        try_files $uri $uri/ /daily/index.html;
+        index index.html;
+    }
+
+    location /daily/api/ {
+        proxy_pass http://127.0.0.1:8001/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90s;
+        proxy_connect_timeout 10s;
+    }

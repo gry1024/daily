@@ -1,0 +1,102 @@
+/* ============================================
+   AutoTreehole Daily · Design Tokens
+   完整复刻 VibeCoding-Scaffold/frontend-design-system.md
+   ============================================ */
+
+:root {
+  /* 背景 */
+  --bg: #F5F5F7;
+  --bg-elevated: #FFFFFF;
+  --bg-hover: #EBEBEE;
+
+  /* 文字 */
+  --fg: #1D1D1F;
+  --fg-secondary: #6E6E73;
+  --fg-tertiary: #86868B;
+
+  /* 强调色 */
+  --accent: #1D1D1F;
+  --accent-blue: #0071E3;
+
+  /* 主按钮 */
+  --btn-primary-bg: #1D1D1F;
+  --btn-primary-hover: #000000;
+
+  /* 分割线 */
+  --divider: #D2D2D7;
+  --divider-subtle: #E8E8ED;
+
+  /* 状态 */
+  --danger: #FF3B30;
+  --success: #34C759;
+  --warning: #FF9500;
+
+  /* 圆角 */
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-pill: 999px;
+
+  /* 阴影 */
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-pop: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-fab: 0 2px 12px rgba(0, 0, 0, 0.18);
+
+  /* 字体 */
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Noto Sans SC", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* 基础字号 */
+  --fs-base: 15px;
+
+  /* 缓动 */
+  --ease-apple: cubic-bezier(.2, .7, .2, 1);
+
+  /* 侧边栏宽度 */
+  --sidebar-w: 220px;
+  --header-h: 56px;
+  --container-max: 1180px;
+}
+
+[data-theme="dark"] {
+  --bg: #1A1A1C;
+  --bg-elevated: #242426;
+  --bg-hover: #2C2C2E;
+  --fg: #F5F5F7;
+  --fg-secondary: #AEAEB2;
+  --fg-tertiary: #8E8E93;
+  --accent: #F5F5F7;
+  --accent-blue: #0A84FF;
+  --btn-primary-bg: #48484A;
+  --btn-primary-hover: #5C5C5E;
+  --divider: #38383A;
+  --divider-subtle: #2C2C2E;
+  --shadow-pop: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --header-bg: rgba(26, 26, 28, 0.72);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: var(--fs-base); }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-serif);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.7;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+a { color: var(--accent-blue); text-decoration: none; transition: opacity .15s; }
+a:hover { opacity: 0.7; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font-family: var(--font-sans); color: inherit; }
+::selection { background: #0071E3; color: #fff; opacity: 0.15; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
