@@ -82,8 +82,12 @@ function renderSection(s) {
       const meta8 = it.expire_date ? `<span>⏰ 至 ${escapeHTML(it.expire_date)}</span>` : '';
       const meta9 = it.difficulty ? `<span class="badge">${escapeHTML(it.difficulty)}</span>` : '';
       const meta10 = it.publish_date ? `<span>${escapeHTML(it.publish_date)}</span>` : '';
-      return `<div class="list-item">
-        <div class="list-item-title">${escapeHTML(title)}</div>
+      const url = it.url || it.abs_url || '';
+      const titleHtml = url
+        ? `<a href="${escapeHTML(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHTML(title)}</a>`
+        : escapeHTML(title);
+      return `<div class="list-item card-with-actions" data-url="${escapeHTML(url)}" style="position:relative;cursor:pointer">
+        <div class="list-item-title">${titleHtml}</div>
         ${it.summary_zh || it.one_line_zh || it.description || it.note || it.summary ? `<div class="list-item-summary">${escapeHTML(it.summary_zh || it.one_line_zh || it.description || it.note || it.summary || '')}</div>` : ''}
         <div class="list-item-meta">
           ${meta1}${meta2}${meta3}${meta4}${meta5}${meta6}${meta7}${meta8}${meta9}${meta10}
@@ -119,6 +123,15 @@ export async function renderToday(container) {
         <div class="empty-state-title">今日暂无新增</div>
         <div class="empty-state-desc">凌晨 5:00 的抓取任务还没跑过，或者全部模块均无更新。</div>
       </div>`;
+
+    // 每条 list-item 点击 → 跳到对应模块详情页（用 hash 定位）
+    container.querySelectorAll('.list-item[data-url]').forEach(card => {
+      card.addEventListener('click', () => {
+        const url = card.dataset.url;
+        if (!url) return;
+        window.open(url, '_blank');
+      });
+    });
 
     container.querySelector('#today-mark-read')?.addEventListener('click', () => {
       // 把所有 section items 加入 seen

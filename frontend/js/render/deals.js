@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { escapeHTML } from '../app.js';
 import { store } from '../state.js';
+import { showDetail } from '../detail-panel.js';
 import { toast } from '../toast.js';
 
 const CATS = [
@@ -24,9 +25,8 @@ function daysLeft(expire) {
 }
 
 function countdownClass(dl) {
-  if (dl === null) return '';
+  if (dl === null || dl === undefined) return '';
   if (dl <= 1) return 'urgent';
-  if (dl <= 3) return 'urgent';
   return '';
 }
 
@@ -45,17 +45,17 @@ function renderItem(d) {
     countdownHtml = `<span class="countdown ${cls}">${txt}</span>`;
   }
   return `
-    <div class="list-item card-with-actions" data-url="${escapeHTML(d.url)}" style="position:relative">
+    <div class="list-item card-with-actions" data-url="${escapeHTML(d.url)}" data-json='${escapeHTML(JSON.stringify(d).replace(/'/g, "&#39;"))}' style="position:relative;cursor:pointer">
       <div class="card-actions">
         <button class="action-btn ${claimed ? 'active' : ''}" data-action="claim" data-url="${escapeHTML(d.url)}" title="已领取">✓</button>
       </div>
       ${claimed ? '<span class="item-status" style="color:var(--success)">✓ 已领取</span>' : ''}
-      <div class="list-item-title" style="padding-right:60px"><a href="${escapeHTML(d.url)}" target="_blank" rel="noopener">${escapeHTML(d.title || '')}</a> ${countdownHtml}</div>
+      <div class="list-item-title" style="padding-right:60px"><a href="${escapeHTML(d.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHTML(d.title || '')}</a> ${countdownHtml}</div>
       ${d.note ? `<div class="list-item-summary">${escapeHTML(d.note)}</div>` : ''}
       <div class="list-item-meta">
         ${d.category ? `<span class="badge">${escapeHTML(d.category)}</span>` : ''}
         ${d.requirements ? `<span>条件：${escapeHTML(d.requirements)}</span>` : ''}
-        ${d.source ? `<span>${escapeHTML(d.source)}</span>` : ''}
+        <span>${escapeHTML(d.source || '')}</span>
         ${d.publish_date ? `<span>发布 ${escapeHTML(d.publish_date)}</span>` : ''}
       </div>
     </div>
@@ -67,6 +67,7 @@ function renderStats(items, claimedCount) {
     const dl = daysLeft(d.expire_date);
     return dl !== null && dl <= 7 && dl > 0;
   }).length;
+  const expired = items.filter(d => daysLeft(d.expire_date) === 0).length;
   return `
     <div class="stat-group">
       <div class="stat-card">
@@ -96,7 +97,56 @@ function renderFilters() {
   `;
 }
 
+function showDealDetail(d) {
+  const dl = daysLeft(d.expire_date);
+  const claimed = store.saved.has('deals_claimed', d.url);
+  showDetail({
+    title: d.title,
+    badges: [
+      d.category ? `<span class="badge">${escapeHTML(d.category)}</span>` : '',
+      dl !== null && dl <= 7 && dl > 0 ? '<span class="badge" style="background:rgba(255,149,0,0.12);color:var(--warning)">⏰ 即将过期</span>' : '',
+      claimed ? '<span class="badge badge-success">✓ 已领取</span>' : '',
+    ],
+    meta: `
+      ${d.expire_date ? `<span>截止：${escapeHTML(d.expire_date)}（${dl} 天）</span>` : '<span style="color:var(--fg-tertiary)">无截止</span>'}
+      ${d.source ? `<span>来源：${escapeHTML(d.source)}</span>` : ''}
+    `,
+    content: `
+      ${d.note ? `<p style="font-size:1.067rem;line-height:1.8">${escapeHTML(d.note)}</p>` : ''}
+      ${d.requirements ? `<h3>领取条件</h3><p>${escapeHTML(d.requirements)}</p>` : ''}
+      ${d.publish_date ? `<p style="color:var(--fg-tertiary);font-size:0.867rem">发布于 ${escapeHTML(d.publish_date)}</p>` : ''}
+      ${d.url ? `<p style="margin-top:16px"><a href="${escapeHTML(d.url)}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-weight:500">立即领取 →</a></p>` : ''}
+    `,
+    actions: [
+      {
+        label: claimed ? '✓ 已领取' : '标记已领取',
+        icon: '✓',
+        primary: !claimed,
+        onClick: () => {
+          const added = store.saved.toggle('deals_claimed', d.url);
+          toast[added ? 'success' : 'info'](added ? '✓ 已标记领取' : '已取消');
+          return 'close';
+        },
+      },
+      {
+        label: '打开链接',
+        onClick: () => { window.open(d.url, '_blank'); return 'close'; },
+      },
+    ],
+  });
+}
+
 function bindEvents(container) {
+  // 整张卡点击 → 详情
+  container.querySelectorAll('.list-item[data-url]').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.action-btn') || e.target.closest('a')) return;
+      try {
+        const d = JSON.parse(card.dataset.json || '{}');
+        showDealDetail(d);
+      } catch {}
+    });
+  });
   container.querySelectorAll('[data-action="claim"]').forEach(b => {
     b.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -118,7 +168,6 @@ export async function renderDeals(container) {
     if (currentCat) params.set('category', currentCat);
     const data = await api.get('/deals?' + params);
     const items = (data.items || []).sort((a, b) => {
-      // 按过期时间升序（先到期的在前）
       const da = a.expire_date ? new Date(a.expire_date).getTime() : Infinity;
       const db = b.expire_date ? new Date(b.expire_date).getTime() : Infinity;
       return da - db;

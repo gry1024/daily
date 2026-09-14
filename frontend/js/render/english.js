@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { escapeHTML } from '../app.js';
 import { store } from '../state.js';
+import { showDetail } from '../detail-panel.js';
 import { toast } from '../toast.js';
 
 const ICON_AUDIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
@@ -83,12 +84,93 @@ function renderModeBar() {
   `;
 }
 
+// ============== 详情 Modal ==============
+function showWordDetail(w) {
+  const status = store.notes.get('english_words', w.id);
+  const isVocab = store.saved.has('vocab', w.id);
+  const content = `
+    <div style="text-align:center;padding:20px;background:var(--bg);border-radius:var(--radius);margin-bottom:24px">
+      <div style="font-family:var(--font-serif);font-size:2.4rem;font-weight:500;letter-spacing:-0.02em">${escapeHTML(w.word)}</div>
+      ${w.phonetic ? `<div style="font-family:var(--mono);color:var(--fg-tertiary);margin-top:4px">${escapeHTML(w.phonetic)}</div>` : ''}
+      <button class="btn btn-sm" data-speak="${escapeHTML(w.word)}" style="margin-top:12px">🔊 朗读</button>
+    </div>
+    ${w.definition ? `<h3>📖 释义</h3><p style="font-size:1.067rem">${escapeHTML(w.definition)}</p>` : ''}
+    ${w.example ? `<h3>💬 例句</h3><p style="font-family:var(--font-sans);background:var(--bg);padding:12px;border-radius:var(--radius);border-left:3px solid var(--accent-blue)">${escapeHTML(w.example)}</p>` : ''}
+    ${w.collocations ? `<h3>🔗 搭配</h3><p>${escapeHTML(w.collocations)}</p>` : ''}
+    ${w.synonyms_note ? `<h3>⚖️ 辨析</h3><p>${escapeHTML(w.synonyms_note)}</p>` : ''}
+  `;
+  showDetail({
+    title: w.word,
+    badges: [
+      w.difficulty ? `<span class="badge">${escapeHTML(w.difficulty)}</span>` : '',
+      isVocab ? '<span class="badge" style="background:rgba(255,149,0,0.12);color:var(--warning)">★ 生词本</span>' : '',
+    ],
+    meta: w.phonetic ? `<span style="font-family:var(--mono)">${escapeHTML(w.phonetic)}</span>` : '',
+    content,
+    actions: [
+      {
+        label: status === 'known' ? '✓ 已掌握' : '标记已掌握',
+        icon: '✓',
+        primary: status !== 'known',
+        onClick: () => {
+          store.notes.set('english_words', w.id, status === 'known' ? null : 'known');
+          toast.success(status === 'known' ? '已取消' : '✓ 已掌握');
+          return 'close';
+        },
+      },
+      {
+        label: isVocab ? '★ 已加入生词本' : '加入生词本',
+        icon: '★',
+        onClick: () => {
+          const added = store.saved.toggle('vocab', w.id);
+          toast[added ? 'success' : 'info'](added ? '★ 已加入' : '已移除');
+          return 'close';
+        },
+      },
+    ],
+  });
+  // 详情打开后绑朗读
+  setTimeout(() => {
+    document.querySelector('[data-speak]')?.addEventListener('click', () => speak(w.word));
+  }, 100);
+}
+
+function showPhraseDetail(p) {
+  const content = `
+    <div style="text-align:center;padding:20px;background:var(--bg);border-radius:var(--radius);margin-bottom:24px">
+      <div style="font-family:var(--serif);font-size:1.6rem;font-weight:500">${escapeHTML(p.phrase)}</div>
+      <button class="btn btn-sm" data-speak-phrase="${escapeHTML(p.phrase)}" style="margin-top:12px">🔊 朗读</button>
+    </div>
+    ${p.meaning_zh ? `<h3>中文释义</h3><p style="font-size:1.067rem">${escapeHTML(p.meaning_zh)}</p>` : ''}
+    ${p.meaning_en ? `<h3>English</h3><p>${escapeHTML(p.meaning_en)}</p>` : ''}
+    ${p.source_sentence ? `<h3>原句</h3><blockquote style="border-left:3px solid var(--divider);padding:12px 16px;color:var(--fg-secondary);font-style:italic;background:var(--bg);border-radius:0 var(--radius) var(--radius) 0">"${escapeHTML(p.source_sentence)}"</blockquote>` : ''}
+    ${p.usage_note ? `<h3>用法</h3><p>${escapeHTML(p.usage_note)}</p>` : ''}
+    ${p.alternatives ? `<h3>同义表达</h3><p>${escapeHTML(p.alternatives)}</p>` : ''}
+    ${p.source_url ? `<p style="margin-top:24px"><a href="${escapeHTML(p.source_url)}" target="_blank" rel="noopener">查看原文 →</a></p>` : ''}
+  `;
+  showDetail({
+    title: p.phrase,
+    badges: [`<span class="badge">短语</span>`],
+    meta: p.source_url ? `<a href="${escapeHTML(p.source_url)}" target="_blank" rel="noopener">来源</a>` : '',
+    content,
+    actions: [
+      {
+        label: '关闭',
+        onClick: () => 'close',
+      },
+    ],
+  });
+  setTimeout(() => {
+    document.querySelector('[data-speak-phrase]')?.addEventListener('click', () => speak(p.phrase));
+  }, 100);
+}
+
 // ============== 列表模式 ==============
 function renderWordListItem(w) {
   const status = store.notes.get('english_words', w.id);
   const isVocab = store.saved.has('vocab', w.id);
   return `
-    <div class="word-card" data-wid="${w.id}" style="position:relative">
+    <div class="word-card" data-wid="${w.id}" data-json='${escapeHTML(JSON.stringify(w).replace(/'/g, "&#39;"))}' style="position:relative;cursor:pointer">
       <div class="word-head">
         <span class="word-text">${escapeHTML(w.word)}</span>
         ${w.phonetic ? `<span class="word-phonetic">${escapeHTML(w.phonetic)}</span>` : ''}
@@ -110,7 +192,7 @@ function renderWordListItem(w) {
 
 function renderPhraseListItem(p) {
   return `
-    <div class="phrase-card" data-pid="${p.id}">
+    <div class="phrase-card" data-pid="${p.id}" data-json='${escapeHTML(JSON.stringify(p).replace(/'/g, "&#39;"))}' style="cursor:pointer">
       <div class="word-head">
         <span class="word-text" style="font-size:1.067rem">${escapeHTML(p.phrase)}</span>
         <button class="audio-btn" data-audio="${escapeHTML(p.phrase)}" title="朗读">${ICON_AUDIO}</button>
@@ -126,11 +208,29 @@ function renderPhraseListItem(p) {
 }
 
 function bindListEvents(container) {
+  // 整张卡点击 → 详情 modal
+  container.querySelectorAll('.word-card[data-wid]').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const id = card.dataset.wid;
+      const w = JSON.parse(card.dataset.json || '{}');
+      showWordDetail(w);
+    });
+  });
+  container.querySelectorAll('.phrase-card[data-pid]').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;  // 允许来源链接点击
+      const p = JSON.parse(card.dataset.json || '{}');
+      showPhraseDetail(p);
+    });
+  });
+
   container.querySelectorAll('.audio-btn').forEach(b => {
-    b.addEventListener('click', () => speak(b.dataset.audio));
+    b.addEventListener('click', (e) => { e.stopPropagation(); speak(b.dataset.audio); });
   });
   container.querySelectorAll('.vocab-btn').forEach(b => {
-    b.addEventListener('click', () => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = b.dataset.vocab;
       const added = store.saved.toggle('vocab', id);
       b.classList.toggle('on', added);
@@ -138,7 +238,8 @@ function bindListEvents(container) {
     });
   });
   container.querySelectorAll('[data-status]').forEach(b => {
-    b.addEventListener('click', () => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
       const wid = b.dataset.wid;
       const status = b.dataset.status;
       const cur = store.notes.get('english_words', wid);
