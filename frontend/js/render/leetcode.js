@@ -3,21 +3,7 @@ import { escapeHTML } from '../app.js';
 import { store } from '../state.js';
 import { showDetail } from '../detail-panel.js';
 import { toast } from '../toast.js';
-
-function md(text) {
-  if (!text) return '';
-  let s = escapeHTML(text);
-  s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code class="lang-${lang || ''}">${code}</code></pre>`);
-  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  s = s.replace(/^- (.+)$/gm, '<li>$1</li>');
-  s = s.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
-  s = s.replace(/\n\n+/g, '</p><p>');
-  s = s.replace(/\n/g, '<br>');
-  return `<p>${s}</p>`;
-}
+import { renderMarkdown } from '../markdown.js';
 
 const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
 const ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>';
@@ -113,7 +99,7 @@ function bindQuestionEvents(container, currentQ) {
           ${d.tags ? `<span>${escapeHTML(d.tags.split(',').slice(0, 3).join(' · '))}</span>` : ''}
         `,
         content: `
-          ${d.solution_md ? md(d.solution_md) : '<p style="color:var(--fg-tertiary)">此题暂无题解，欢迎提交 PR 补充。</p>'}
+          ${d.solution_md ? `<div class="markdown-body">${renderMarkdown(d.solution_md)}</div>` : '<p style="color:var(--fg-tertiary)">此题暂无题解，欢迎提交 PR 补充。</p>'}
           ${d.complexity ? `<h3>复杂度</h3><p>${escapeHTML(d.complexity)}</p>` : ''}
           <h3>参考</h3>
           <ul>

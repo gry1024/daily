@@ -1,0 +1,132 @@
+[
+  {
+    "title": "北京大学 AI 研究院公开讲座：大模型推理优化前沿",
+    "summary": "邀请上海AI Lab/清华/字节专家分享 LLM 推理加速、KV cache 压缩、推测解码等热点方向。",
+    "event_date": "2026-09-20",
+    "location": "北京大学静园六院 201 多功能厅",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.ai.pku.edu.cn/",
+    "relevance": 3
+  },
+  {
+    "title": "北京大学信科 2026 级图灵班 / 智能班 / 拔尖计划 招生说明会",
+    "summary": "信科图灵班、智班、强基等拔尖计划宣讲。介绍选拔机制、培养方案、往年去向。",
+    "event_date": "2026-09-25",
+    "location": "理科一号楼 1114",
+    "event_type": "admission",
+    "source": "curated",
+    "url": "https://eecs.pku.edu.cn/",
+    "relevance": 3
+  },
+  {
+    "title": "北大 Quant Club × 量化头部公司联合研讨会",
+    "summary": "邀请九坤 / 幻方 / Optiver 量化研究人员分享：高频策略、因子研究、alpha decay。",
+    "event_date": "2026-09-28",
+    "location": "光华管理学院 1 号楼",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.pku.edu.cn/",
+    "relevance": 3
+  },
+  {
+    "title": "北京大学 2027 年接收推荐免试研究生（保研）办法发布",
+    "summary": "北大 2027 推免章程，含各院系接收名额、申请流程、材料提交节点、夏令营 / 九月推免时间。",
+    "event_date": "2026-09-15",
+    "location": "线上（北京大学研究生院官网）",
+    "event_type": "admission",
+    "source": "curated",
+    "url": "https://grs.pku.edu.cn/",
+    "relevance": 3
+  },
+  {
+    "title": "2026 北京大学国奖 / 校长奖 / 五四奖学金 申报通知",
+    "summary": "2025-2026 学年国奖 / 校长奖 / 五四奖学金申报启动。个人提交截止至 2026-09-30。",
+    "event_date": "2026-09-30",
+    "location": "在线申请系统",
+    "event_type": "scholarship",
+    "source": "curated",
+    "url": "https://www.pku.edu.cn/",
+    "relevance": 2
+  },
+  {
+    "title": "清华大学 AI 研究院 系列讲座：Foundation Models for Science",
+    "summary": "邀请 UCLA / CMU 学者分享 AI for Science（材料 / 生物 / 气象 / 物理）的前沿工作。",
+    "event_date": "2026-09-22",
+    "location": "清华大学 FIT 楼 1-315",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.tsinghua.edu.cn/",
+    "relevance": 2
+  },
+  {
+    "title": "Optiver 北京 / 上海 量化交易 2027 校招宣讲",
+    "summary": "Optiver 全球知名量化交易公司校招启动，面向 2027 届本硕，岗位：Quantitative Trader / Researcher。",
+    "event_date": "2026-10-08",
+    "location": "北京大学 + 清华大学（具体场地 TBD）",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.optiver.com/careers",
+    "relevance": 3
+  },
+  {
+    "title": "Jane Street 2027 量化研究 / 交易 校招宣讲",
+    "summary": "Jane Street 全球知名做市商校招启动，岗位：Quantitative Trader / Researcher / Developer。",
+    "event_date": "2026-10-15",
+    "location": "北京大学 + 清华大学",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.janestreet.com/jobs",
+    "relevance": 3
+  },
+  {
+    "title": "北大信科 × MARS Lab 学术沙龙：Multi-Agent LLM Systems",
+    "summary": "MARS Lab 多智能体系统最新进展：AutoGen / Swarm / 协作框架 / agent benchmark。",
+    "event_date": "2026-09-30",
+    "location": "理科一号楼 1560",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://eecs.pku.edu.cn/",
+    "relevance": 3
+  },
+  {
+    "title": "第九届北大金融数学与金融工程研讨会",
+    "summary": "北大金融数学系主办，主题：随机控制 / 量化交易 / 风险管理。",
+    "event_date": "2026-10-12",
+    "location": "理科五号楼 301",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.math.pku.edu.cn/",
+    "relevance": 2
+  },
+  {
+    "title": "PKU 2026 秋季学期 CS 选课说明会（研一）",
+    "summary": "研究生 CS 方向选课策略、推荐组合、AI / 系统方向分流。",
+    "event_date": "2026-09-18",
+    "location": "理科一号楼 1114",
+    "event_type": "notice",
+    "source": "curated",
+    "url": "https://eecs.pku.edu.cn/",
+    "relevance": 1
+  },
+  {
+    "title": "Microsoft Research Asia 2027 实习 / 校招宣讲",
+    "summary": "MSRA 北京招研究实习生，覆盖 AI / Systems / Theory / HCI，9-10 月开放申请。",
+    "event_date": "2026-10-20",
+    "location": "北京大学 静园",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.microsoft.com/en-us/research/",
+    "relevance": 3
+  },
+  {
+    "title": "IDEA 研究院 2027 校招（北京站）",
+    "summary": "粤港澳大湾区数字经济研究院招聘宣讲，覆盖 CV / NLP / RL / Agent。",
+    "event_date": "2026-10-25",
+    "location": "北京大学",
+    "event_type": "lecture",
+    "source": "curated",
+    "url": "https://www.idea.edu.cn/",
+    "relevance": 2
+  }
+]

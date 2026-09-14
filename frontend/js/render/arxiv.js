@@ -3,6 +3,7 @@ import { escapeHTML } from '../app.js';
 import { store } from '../state.js';
 import { showDetail } from '../detail-panel.js';
 import { toast } from '../toast.js';
+import { renderMarkdown } from '../markdown.js';
 
 const CATS = [
   { v: '', label: '全部' },
@@ -107,8 +108,8 @@ function bindEvents(container) {
         content: `
           ${merged.one_line_zh ? `<p style="font-size:1.067rem;color:var(--fg);font-family:var(--font-serif);line-height:1.7;padding:12px 16px;background:var(--bg);border-radius:var(--radius);border-left:3px solid var(--accent-blue)">${escapeHTML(merged.one_line_zh)}</p>` : ''}
           <h3>Abstract</h3>
-          <p>${escapeHTML(merged.abstract || '（暂无）')}</p>
-          ${merged.contributions ? `<h3>核心贡献</h3><div style="font-family:var(--font-sans);line-height:1.8">${escapeHTML(merged.contributions).replace(/\n/g, '<br>')}</div>` : ''}
+          <div class="markdown-body">${renderMarkdown(merged.abstract || '（暂无）')}</div>
+          ${merged.contributions ? `<h3>核心贡献</h3><div class="markdown-body">${renderMarkdown(merged.contributions)}</div>` : ''}
           ${merged.pdf_url ? `<h3>资源</h3><ul><li><a href="${escapeHTML(merged.pdf_url)}" target="_blank" rel="noopener">📄 PDF</a></li><li><a href="${escapeHTML(merged.abs_url)}" target="_blank" rel="noopener">🔗 arXiv 摘要页</a></li><li><a href="https://www.google.com/search?q=%22${encodeURIComponent(merged.title)}%22" target="_blank" rel="noopener">🔍 Google 搜索</a></li><li><a href="https://scholar.google.com/scholar?q=${encodeURIComponent(merged.title)}" target="_blank" rel="noopener">📚 Google Scholar</a></li></ul>` : ''}
         `,
         actions: [

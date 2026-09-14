@@ -4,6 +4,8 @@ import { store } from '../state.js';
 import { showDetail } from '../detail-panel.js';
 import { toast } from '../toast.js';
 
+const ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+
 const TYPES = [
   { v: '', label: '全部' },
   { v: 'notice', label: '通知' },
@@ -55,6 +57,20 @@ function renderItem(e) {
   const expired = e.expire_date && e.expire_date < new Date().toISOString().slice(0,10);
   const isGoing = store.saved.has('school', e.url);
   const stars = '★'.repeat(e.relevance || 0);
+  // 计算 days_until（距今 N 天）
+  let daysUntil = null;
+  if (e.event_date) {
+    const today = new Date().toISOString().slice(0, 10);
+    daysUntil = Math.ceil((new Date(e.event_date) - new Date(today)) / 86400000);
+  }
+  let dateBadge;
+  if (daysUntil === null) dateBadge = '';
+  else if (daysUntil < 0) dateBadge = `<span class="badge badge-expired">${e.event_date} 已过期</span>`;
+  else if (daysUntil === 0) dateBadge = `<span class="badge" style="background:rgba(255,59,48,0.12);color:#C1314A">🔥 今天</span>`;
+  else if (daysUntil === 1) dateBadge = `<span class="badge" style="background:rgba(255,149,0,0.12);color:var(--warning)">📅 明天 ${e.event_date}</span>`;
+  else if (daysUntil <= 7) dateBadge = `<span class="badge" style="background:rgba(255,149,0,0.12);color:var(--warning)">📅 ${daysUntil} 天后 ${e.event_date}</span>`;
+  else dateBadge = `<span class="badge">📅 ${e.event_date}</span>`;
+
   return `
     <div class="list-item card-with-actions ${expired ? 'is-dim' : ''}" data-url="${escapeHTML(e.url)}" style="position:relative">
       <div class="card-actions">
@@ -63,17 +79,15 @@ function renderItem(e) {
       </div>
       ${isGoing ? '<span class="item-status" style="color:var(--accent-blue)">✓ 我要去</span>' : ''}
       <div class="list-item-title" style="padding-right:80px">
-        ${expired ? '<span class="badge badge-expired">已过期</span> ' : ''}
-        ${e.event_date ? `<span class="badge" style="margin-right:8px">📅 ${escapeHTML(e.event_date)}</span>` : ''}
-        ${escapeHTML(e.title || '')}
+        ${dateBadge}
+        <span style="margin-left:6px">${escapeHTML(e.title || '')}</span>
       </div>
-      <div class="list-item-summary">${escapeHTML(e.summary || '')}</div>
+      ${e.summary ? `<div class="list-item-summary">${escapeHTML(e.summary)}</div>` : ''}
       <div class="list-item-meta">
         ${e.relevance ? `<span class="badge badge-${Math.min(3, e.relevance)}">${stars}</span>` : ''}
         ${e.event_type ? `<span class="badge">${escapeHTML(e.event_type)}</span>` : ''}
-        ${e.location ? `<span>📍 ${escapeHTML(e.location)}</span>` : ''}
-        ${e.source ? `<span>${escapeHTML(e.source)}</span>` : ''}
-        ${e.expire_date ? `<span>⏰ 至 ${escapeHTML(e.expire_date)}</span>` : ''}
+        ${e.location && e.location !== '未知' ? `<span>📍 ${escapeHTML(e.location)}</span>` : ''}
+        ${e.source ? `<span style="color:var(--fg-tertiary)">${escapeHTML(e.source.replace('ddg:', ''))}</span>` : ''}
       </div>
     </div>
   `;
@@ -83,6 +97,81 @@ function escapeICS(s) {
   return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
+function showAddEventForm(container) {
+  const today = new Date().toISOString().slice(0, 10);
+  const formHtml = `
+    <form id="add-event-form" style="text-align:left">
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:0.867rem;color:var(--fg-secondary);margin-bottom:4px">标题 *</label>
+        <input type="text" name="title" required placeholder="如：北大 AI 研究院讲座" style="width:100%;padding:8px 10px;border:1px solid var(--divider);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--fg);font-family:var(--font-sans)" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:0.867rem;color:var(--fg-secondary);margin-bottom:4px">日期</label>
+          <input type="date" name="event_date" value="${today}" style="width:100%;padding:8px 10px;border:1px solid var(--divider);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--fg);font-family:var(--font-sans)" />
+        </div>
+        <div>
+          <label style="display:block;font-size:0.867rem;color:var(--fg-secondary);margin-bottom:4px">类型</label>
+          <select name="event_type" style="width:100%;padding:8px 10px;border:1px solid var(--divider);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--fg);font-family:var(--font-sans)">
+            <option value="lecture">讲座</option>
+            <option value="contest">比赛</option>
+            <option value="admission">招生 / 推免</option>
+            <option value="scholarship">奖学金</option>
+            <option value="exchange">交换</option>
+            <option value="notice">通知</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:0.867rem;color:var(--fg-secondary);margin-bottom:4px">地点</label>
+        <input type="text" name="location" placeholder="如：理科一号楼 1114 / 线上" style="width:100%;padding:8px 10px;border:1px solid var(--divider);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--fg);font-family:var(--font-sans)" />
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:0.867rem;color:var(--fg-secondary);margin-bottom:4px">详情链接</label>
+        <input type="url" name="url" placeholder="https://..." style="width:100%;padding:8px 10px;border:1px solid var(--divider);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--fg);font-family:var(--font-sans)" />
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:0.867rem;color:var(--fg-secondary);margin-bottom:4px">摘要</label>
+        <textarea name="summary" rows="3" placeholder="一句话说明" style="width:100%;padding:8px 10px;border:1px solid var(--divider);border-radius:var(--radius-sm);background:var(--bg-elevated);color:var(--fg);font-family:var(--font-sans);resize:vertical"></textarea>
+      </div>
+    </form>
+  `;
+  showDetail({
+    title: '添加活动',
+    content: formHtml,
+    actions: [
+      {
+        label: '取消',
+        onClick: () => { return 'close'; },
+      },
+      {
+        label: '保存',
+        primary: true,
+        onClick: async () => {
+          const form = document.getElementById('add-event-form');
+          const fd = new FormData(form);
+          const data = Object.fromEntries(fd.entries());
+          if (!data.title.trim()) { toast.error('请填标题'); return false; }
+          try {
+            const r = await api.post('/school', data);
+            if (r.error) { toast.error(r.error); return false; }
+            toast.success('✓ 已添加');
+            renderSchool(container);
+            return 'close';
+          } catch (e) {
+            toast.error('保存失败：' + e.message);
+            return false;
+          }
+        },
+      },
+    ],
+  });
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function generateICS(items) {
   const now = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//AutoTreehole//Daily//ZH\r\n';
@@ -90,7 +179,7 @@ function generateICS(items) {
     const start = (e.event_date || todayStr()).replace(/-/g, '');
     const end = e.expire_date ? e.expire_date.replace(/-/g, '') : start;
     ics += `BEGIN:VEVENT\r\n`;
-    ics += `UID:${e.id}@autotreehole.cn\r\n`;
+    ics += `UID:${e.id || Math.random().toString(36).slice(2)}@autotreehole.cn\r\n`;
     ics += `DTSTAMP:${now}\r\n`;
     ics += `DTSTART;VALUE=DATE:${start}\r\n`;
     if (end !== start) ics += `DTEND;VALUE=DATE:${end}\r\n`;
@@ -102,10 +191,6 @@ function generateICS(items) {
   });
   ics += 'END:VCALENDAR\r\n';
   return ics;
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function downloadICS(items) {
@@ -198,19 +283,27 @@ function bindEvents(container, upcomingCache) {
 export async function renderSchool(container) {
   container.innerHTML = `
     <div class="school-stats"></div>
-    <div class="school-filters"></div>
-    <div id="school-upcoming"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px">
-      <h2 style="font-family:var(--font-serif);font-size:1.4rem">近期通知</h2>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-primary btn-sm" id="add-event">${ICON_PLUS} 添加活动</button>
       <button class="btn btn-sm" id="export-all-cal">${ICON_CAL} 全部加入日历</button>
     </div>
+    <div class="school-filters"></div>
+    <div id="school-upcoming"></div>
+    <h2 style="font-family:var(--font-serif);font-size:1.4rem;margin:24px 0 12px">近期通知</h2>
     <div id="school-list"></div>
   `;
   try {
     // 未来 7 天
     const up = await api.get('/school/upcoming?days=7');
-    const list = await api.get('/school?days=14');
+    const list = await api.get('/school?days=60');
     let items = list.items;
+    // 排序：有日期的（按日期升序=即将到来的在前）在前，无日期的放后面
+    items.sort((a, b) => {
+      const da = a.event_date || '9999-99-99';
+      const db = b.event_date || '9999-99-99';
+      if (da !== db) return da < db ? -1 : 1;
+      return (b.relevance || 0) - (a.relevance || 0);
+    });
     if (currentType) items = items.filter(i => i.event_type === currentType);
     if (relevantOnly) items = items.filter(i => (i.relevance || 0) >= 2);
 
@@ -223,11 +316,11 @@ export async function renderSchool(container) {
     const upEl = container.querySelector('#school-upcoming');
     if (upcomingEvents.length) {
       upEl.innerHTML = `
-        <h2 style="font-family:var(--font-serif);font-size:1.4rem;margin:24px 0 12px">未来 7 天活动</h2>
+        <h2 style="font-family:var(--font-serif);font-size:1.4rem;margin:24px 0 12px">📅 未来 7 天具体活动</h2>
         ${upcomingEvents.map(e => renderItem(e)).join('')}
       `;
     } else {
-      upEl.innerHTML = '';
+      upEl.innerHTML = `<div class="empty-state-desc" style="margin:24px 0;padding:16px;background:var(--bg);border-radius:var(--radius);text-align:center">近 7 天没有抓到具体活动。其它通知见下方 ↓</div>`;
     }
 
     const listEl = container.querySelector('#school-list');
@@ -249,6 +342,8 @@ export async function renderSchool(container) {
     container.querySelectorAll('[data-rel]').forEach(b => {
       b.addEventListener('click', () => { relevantOnly = !relevantOnly; renderSchool(container); });
     });
+
+    container.querySelector('#add-event')?.addEventListener('click', () => showAddEventForm(container));
   } catch (e) {
     container.innerHTML = `<div class="flash error">加载失败：${escapeHTML(e.message)}</div>`;
   }

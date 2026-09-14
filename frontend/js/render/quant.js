@@ -3,28 +3,7 @@ import { escapeHTML } from '../app.js';
 import { store } from '../state.js';
 import { showDetail } from '../detail-panel.js';
 import { toast } from '../toast.js';
-
-// markdown 渲染：段落、**粗体**、`代码`、```fenced```、列表、换行
-function md(text) {
-  if (!text) return '';
-  let s = escapeHTML(text);
-  // fenced code
-  s = s.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${code}</code></pre>`);
-  // inline code
-  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // bold
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  // headings
-  s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  // lists
-  s = s.replace(/^- (.+)$/gm, '<li>$1</li>');
-  s = s.replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`);
-  // paragraphs / line breaks
-  s = s.replace(/\n\n+/g, '</p><p>');
-  s = s.replace(/\n/g, '<br>');
-  return `<p>${s}</p>`;
-}
+import { renderMarkdown } from '../markdown.js';
 
 const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
 const ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>';
@@ -107,9 +86,9 @@ function bindQuestionEvents(container, currentQ) {
           meta: `<span>难度 ${'★'.repeat(currentQ.difficulty||0)}</span><span>${escapeHTML(currentQ.tags || '')}</span>`,
           content: `
             <h3>答案</h3>
-            <p style="font-size:1.067rem">${escapeHTML(d.answer || '（暂无）')}</p>
+            <div class="markdown-body">${renderMarkdown(d.answer || '（暂无）')}</div>
             <h3>解析</h3>
-            ${md(d.solution || '')}
+            <div class="markdown-body">${renderMarkdown(d.solution || '')}</div>
           `,
           actions: [
             {
