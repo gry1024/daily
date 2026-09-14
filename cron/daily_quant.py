@@ -23,7 +23,7 @@ def pick_today(log):
     week_ago = (d - timedelta(days=7)).isoformat()
 
     with get_conn() as conn:
-        # 选 last_shown_at 最早 + 7 天内未展示
+        # 选 last_shown_at 最早 + 7 天内未展示 + 优先有 problem_md 的
         row = conn.execute(
             """
             SELECT q.id FROM quant_questions q
@@ -31,15 +31,18 @@ def pick_today(log):
               SELECT question_id FROM daily_quant
               WHERE date >= ?
             )
+            AND length(q.problem_md) > 30
             ORDER BY q.last_shown_at ASC NULLS FIRST, RANDOM()
             LIMIT 1
             """,
             (week_ago,),
         ).fetchone()
         if not row:
-            # 退而求其次：随便选
+            # 退而求其次：随便选（但仍然要 problem_md > 30）
             row = conn.execute(
-                "SELECT id FROM quant_questions ORDER BY RANDOM() LIMIT 1"
+                """SELECT id FROM quant_questions
+                   WHERE length(problem_md) > 30
+                   ORDER BY RANDOM() LIMIT 1"""
             ).fetchone()
         qid = row["id"]
 

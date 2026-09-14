@@ -21,14 +21,23 @@ def pick_today(log):
     )
     order = (doy % 100) + 1
     with get_conn() as conn:
+        # 优先选有 description_md 的
         row = conn.execute(
-            "SELECT id FROM leetcode_questions WHERE order_in_hot100 = ?",
+            "SELECT id FROM leetcode_questions WHERE order_in_hot100 = ? AND length(description_md) > 30",
             (order,),
         ).fetchone()
         if not row:
+            # 兜底：找最近的（按 order）有内容的
             row = conn.execute(
-                "SELECT id FROM leetcode_questions ORDER BY order_in_hot100 LIMIT 1"
+                """SELECT id FROM leetcode_questions
+                   WHERE length(description_md) > 30
+                   ORDER BY order_in_hot100 LIMIT 1"""
             ).fetchone()
+            if not row:
+                # 最后兜底（理论上不会到这一步）
+                row = conn.execute(
+                    "SELECT id FROM leetcode_questions ORDER BY order_in_hot100 LIMIT 1"
+                ).fetchone()
         qid = row["id"]
         # 检查今日是否已设置
         existing = conn.execute(
