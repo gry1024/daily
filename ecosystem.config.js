@@ -4,8 +4,8 @@ module.exports = {
     {
       name: 'daily-api',
       cwd: '/home/groy/daily',
-      script: 'venv/bin/uvicorn',
-      args: 'backend.app:app --host 127.0.0.1 --port 8001 --workers 1',
+      interpreter: 'none',  // 不解释器，直接 exec
+      script: './run_api.sh',
       env: {
         PYTHONUNBUFFERED: '1',
       },
