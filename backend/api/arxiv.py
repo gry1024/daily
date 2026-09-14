@@ -1,5 +1,5 @@
 """Arxiv 论文 API"""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Query
 from ..db import get_conn
 
 router = APIRouter()
@@ -42,6 +42,7 @@ def list_papers(
 
 @router.get("/{arxiv_id}")
 def paper_detail(arxiv_id: str, request: Request):
+    """论文详情（含完整 abstract + contributions）"""
     with get_conn() as conn:
         row = conn.execute(
             "SELECT * FROM arxiv_papers WHERE arxiv_id=?", (arxiv_id,)
@@ -55,3 +56,26 @@ def paper_detail(arxiv_id: str, request: Request):
         except Exception:
             pass
         return d
+
+
+@router.get("/related/{arxiv_id}")
+def related(arxiv_id: str, request: Request, limit: int = 5):
+    """相关论文（同 category）"""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT category FROM arxiv_papers WHERE arxiv_id=?", (arxiv_id,)
+        ).fetchone()
+        if not row:
+            return {"items": []}
+        cat = row["category"]
+        rows = conn.execute(
+            """
+            SELECT arxiv_id, title, one_line_zh, relevance_score, abs_url, published
+            FROM arxiv_papers
+            WHERE category = ? AND arxiv_id != ?
+            ORDER BY relevance_score DESC, datetime(published) DESC LIMIT ?
+            """,
+            (cat, arxiv_id, limit),
+        ).fetchall()
+        return {"items": [dict(r) for r in rows], "category": cat}
+
