@@ -98,12 +98,51 @@ def random_one(
 
 @router.get("/{qid}")
 def detail(qid: int, request: Request):
+    """完整单题详情（含 description / examples / constraints / hints / solution）"""
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM leetcode_questions WHERE id=?",
+            """SELECT id, lc_id, title_en, title_zh, difficulty, tags, url,
+                      description_md, examples_md, constraints_md, hints_md,
+                      solution_md, complexity, order_in_hot100
+               FROM leetcode_questions WHERE id=?""",
             (qid,),
         ).fetchone()
         if not row:
             return {"error": "not found"}
         return dict(row)
+
+
+@router.get("/{qid}/hint/{n}")
+def hint(qid: int, n: int, request: Request):
+    """获取第 n 个提示（1/2/3）"""
+    if n < 1 or n > 3:
+        return {"error": "hint n must be 1-3"}
+    with get_conn() as conn:
+        row = conn.execute("SELECT hints_md FROM leetcode_questions WHERE id=?", (qid,)).fetchone()
+        if not row or not row["hints_md"]:
+            return {"error": "no hints"}
+        parts = row["hints_md"].split("|HINT_")
+        for p in parts[1:]:
+            if p.startswith(f"{n}|"):
+                return {"n": n, "text": p[2:].strip()}
+        return {"error": f"hint {n} not found"}
+
+
+@router.get("/{qid}/related")
+def related(qid: int, request: Request, limit: int = 5):
+    """相关题（同 tag）"""
+    with get_conn() as conn:
+        row = conn.execute("SELECT tags FROM leetcode_questions WHERE id=?", (qid,)).fetchone()
+        if not row:
+            return {"items": []}
+        tags = (row["tags"] or "").split(",")
+        first_tag = tags[0].strip() if tags and tags[0].strip() else ""
+        rows = conn.execute(
+            """SELECT id, lc_id, title_en, title_zh, difficulty, tags
+               FROM leetcode_questions
+               WHERE id != ? AND tags LIKE ?
+               ORDER BY RANDOM() LIMIT ?""",
+            (qid, f"%{first_tag}%", limit),
+        ).fetchall()
+        return {"items": [dict(r) for r in rows], "tag": first_tag}
 

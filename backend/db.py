@@ -38,13 +38,17 @@ CREATE TABLE IF NOT EXISTS quant_questions (
   question_zh TEXT,
   answer TEXT,
   solution_md TEXT,
+  problem_md TEXT,              -- 完整题目（markdown，含示例/约束）
+  examples_md TEXT,             -- 示例（markdown）
+  constraints_md TEXT,          -- 约束（markdown）
+  hints_md TEXT,                -- 3 个提示，用 |HINT_N| 分隔
   tags TEXT,
   last_shown_at DATE,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS daily_quant (
-  date TEXT PRIMARY KEY,         -- YYYY-MM-DD
+  date TEXT PRIMARY KEY,
   question_id INTEGER REFERENCES quant_questions(id)
 );
 
@@ -52,12 +56,12 @@ CREATE TABLE IF NOT EXISTS daily_quant (
 CREATE TABLE IF NOT EXISTS ai_news (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   publish_date TEXT,
-  source TEXT,                  -- 'openai_blog' / 'qbitai' / 'web_search' / ...
-  url TEXT UNIQUE,              -- 去重键
+  source TEXT,
+  url TEXT UNIQUE,
   title_zh TEXT,
   summary_zh TEXT,
-  category TEXT,                -- product/funding/research/opinion
-  importance INTEGER,           -- 1-3
+  category TEXT,
+  importance INTEGER,
   sentiment TEXT,
   raw_title TEXT,
   raw_content TEXT,
@@ -70,12 +74,12 @@ CREATE TABLE IF NOT EXISTS arxiv_papers (
   arxiv_id TEXT PRIMARY KEY,
   published TEXT,
   title TEXT,
-  authors TEXT,                 -- JSON array
+  authors TEXT,
   abstract TEXT,
   abs_url TEXT,
   pdf_url TEXT,
-  category TEXT,                -- quant/llm/agent/multimodal
-  relevance_score INTEGER,      -- 0-5
+  category TEXT,
+  relevance_score INTEGER,
   one_line_zh TEXT,
   contributions TEXT,
   fetched_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -92,9 +96,9 @@ CREATE TABLE IF NOT EXISTS school_events (
   summary TEXT,
   url TEXT UNIQUE,
   source TEXT,
-  event_type TEXT,              -- notice/lecture/contest/admission/scholarship/exchange
+  event_type TEXT,
   location TEXT,
-  relevance INTEGER,           -- 0-3
+  relevance INTEGER,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_school_expire ON school_events(expire_date);
@@ -102,15 +106,19 @@ CREATE INDEX IF NOT EXISTS idx_school_expire ON school_events(expire_date);
 -- ===== 模块 5: LeetCode =====
 CREATE TABLE IF NOT EXISTS leetcode_questions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  lc_id INTEGER,                -- LeetCode 题目 id
+  lc_id INTEGER,
   title_en TEXT,
   title_zh TEXT,
   difficulty TEXT,
   tags TEXT,
   url TEXT,
-  solution_md TEXT,
+  description_md TEXT,          -- 完整题目描述（markdown，含示例/约束）
+  examples_md TEXT,
+  constraints_md TEXT,
+  hints_md TEXT,                -- 3 个提示，|HINT_N| 分隔
+  solution_md TEXT,             -- 完整题解（markdown）
   complexity TEXT,
-  order_in_hot100 INTEGER       -- 1-100
+  order_in_hot100 INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS daily_leetcode (
@@ -127,7 +135,7 @@ CREATE TABLE IF NOT EXISTS english_words (
   example TEXT,
   collocations TEXT,
   synonyms_note TEXT,
-  difficulty TEXT,              -- 'cet4'/'cet6'/'ielts'/'toefl'/'gre'
+  difficulty TEXT,
   last_shown_at TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -148,8 +156,8 @@ CREATE INDEX IF NOT EXISTS idx_phrase_fetched ON english_phrases(fetched_date);
 
 CREATE TABLE IF NOT EXISTS daily_english (
   date TEXT PRIMARY KEY,
-  word_ids TEXT,                -- JSON array
-  phrase_ids TEXT               -- JSON array
+  word_ids TEXT,
+  phrase_ids TEXT
 );
 
 -- ===== 模块 7: Finance =====
@@ -168,7 +176,7 @@ CREATE TABLE IF NOT EXISTS finance_news (
   url TEXT UNIQUE,
   title_zh TEXT,
   summary_zh TEXT,
-  affects TEXT,                 -- 'gold'/'btc'/'fx'/'equity'
+  affects TEXT,
   importance INTEGER,
   expires_at TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -176,7 +184,7 @@ CREATE TABLE IF NOT EXISTS finance_news (
 
 -- ===== 模块 8: GitHub Trending =====
 CREATE TABLE IF NOT EXISTS github_repos (
-  full_name TEXT PRIMARY KEY,    -- 'owner/repo'
+  full_name TEXT PRIMARY KEY,
   url TEXT,
   description TEXT,
   language TEXT,
@@ -196,7 +204,7 @@ CREATE TABLE IF NOT EXISTS deals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   publish_date TEXT,
   expire_date TEXT,
-  category TEXT,                -- cloud/ai_api/devtool/edu/hosting/misc
+  category TEXT,
   title TEXT,
   source TEXT,
   url TEXT UNIQUE,

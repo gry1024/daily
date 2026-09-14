@@ -131,10 +131,12 @@ def random_one(
 
 @router.get("/{qid}")
 def detail(qid: int, request: Request):
-    """单题详情（不含 answer）"""
+    """完整单题详情（含 problem / examples / constraints / hints）"""
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT id, source, difficulty, question_en, question_zh, tags, last_shown_at FROM quant_questions WHERE id=?",
+            """SELECT id, source, difficulty, question_en, question_zh, answer, solution_md,
+                      problem_md, examples_md, constraints_md, hints_md, tags
+               FROM quant_questions WHERE id=?""",
             (qid,),
         ).fetchone()
         if not row:
@@ -153,5 +155,45 @@ def reveal(qid: int, request: Request):
         if not row:
             return {"error": "not found"}
         return {"id": qid, "answer": row["answer"], "solution": row["solution_md"]}
+
+
+@router.get("/{qid}/hint/{n}")
+def hint(qid: int, n: int, request: Request):
+    """获取第 n 个提示（1/2/3）"""
+    if n < 1 or n > 3:
+        return {"error": "hint n must be 1-3"}
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT hints_md FROM quant_questions WHERE id=?",
+            (qid,),
+        ).fetchone()
+        if not row or not row["hints_md"]:
+            return {"error": "no hints"}
+        parts = row["hints_md"].split("|HINT_")
+        # parts[0] 可能是空 / 部分开头，parts[1/2/3] = "1|..."、"2|..."、"3|..."
+        for p in parts[1:]:
+            if p.startswith(f"{n}|"):
+                return {"n": n, "text": p[2:].strip()}
+        return {"error": f"hint {n} not found"}
+
+
+@router.get("/{qid}/related")
+def related(qid: int, request: Request, limit: int = 4):
+    """相关题（同 tag）"""
+    with get_conn() as conn:
+        row = conn.execute("SELECT tags FROM quant_questions WHERE id=?", (qid,)).fetchone()
+        if not row:
+            return {"items": []}
+        tags = row["tags"] or ""
+        # 取第一个 tag 匹配
+        first_tag = tags.split(",")[0].strip() if tags else ""
+        rows = conn.execute(
+            """SELECT id, source, difficulty, question_zh, tags
+               FROM quant_questions
+               WHERE id != ? AND tags LIKE ?
+               ORDER BY RANDOM() LIMIT ?""",
+            (qid, f"%{first_tag}%", limit),
+        ).fetchall()
+        return {"items": [dict(r) for r in rows], "tag": first_tag}
 
 
