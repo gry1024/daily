@@ -66,16 +66,17 @@ DDG_QUERIES = [
 
 def fetch_candidates(log):
     items = []
+    # RSS 抓取（28 个源，每个最多 8 条以提速）
     for rss_url, source in NEWS_RSS:
         try:
-            rss_items = fetch_rss(rss_url, max_items=10)
+            rss_items = fetch_rss(rss_url, max_items=8)
             for it in rss_items:
                 it["source"] = source
                 items.append(it)
             log.info(f"  RSS {source}: {len(rss_items)} 条")
         except Exception as e:
             log.warning(f"  RSS 失败 {rss_url}: {e}")
-        time.sleep(1)
+        time.sleep(0.3)
 
     # DDG 搜索兜底
     for q in DDG_QUERIES:
@@ -87,14 +88,13 @@ def fetch_candidates(log):
             log.info(f"  DDG '{q[:30]}': {len(results)} 条")
         except Exception as e:
             log.warning(f"  DDG '{q[:30]}' 失败: {e}")
-        time.sleep(2)
+        time.sleep(1)
 
     # 去重
     seen = set()
     fresh = []
     for it in items:
         u = it.get("url", "")
-        # 去掉 query string 简化 dedup
         u_clean = u.split("?")[0].rstrip("/")
         if u_clean and u_clean not in seen:
             seen.add(u_clean)
@@ -160,9 +160,13 @@ def main(log):
     # 限 20 条喂给 LLM
     fresh = fresh[:20]
 
-    # 批量 LLM（5 条/批）
+    # 批量 LLM（5 条/批）— 限制 LLM 总耗时：8 分钟
     summarized = []
+    llm_deadline = time.time() + 480  # 8 分钟截止
     for i in range(0, len(fresh), 5):
+        if time.time() > llm_deadline:
+            log.warning(f"  LLM 达到 8 分钟时限，剩余 {len(fresh)-i} 条跳过")
+            break
         batch = fresh[i:i+5]
         try:
             res = llm_summarize_batch(batch, log)
@@ -173,7 +177,7 @@ def main(log):
             log.info(f"  batch {i//5+1}: {len(res)}/{len(batch)} 保留")
         except Exception as e:
             log.warning(f"  batch {i//5+1} 失败: {e}")
-        time.sleep(1)
+        time.sleep(0.5)
 
     # 入库
     inserted = 0

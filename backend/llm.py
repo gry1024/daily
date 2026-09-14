@@ -50,7 +50,7 @@ def chat_json(
     *,
     model: str = None,
     temperature: float = 0.3,
-    max_retries: int = 3,
+    max_retries: int = 1,  # cron 批量场景：失败立即跳过，不阻塞整批
 ) -> Optional[dict | list | str]:
     """
     调 LLM，期望返回 JSON。失败返回 None。
@@ -95,7 +95,7 @@ def chat_text(
     *,
     model: str = None,
     temperature: float = 0.4,
-    max_retries: int = 3,
+    max_retries: int = 1,
 ) -> Optional[str]:
     """自由文本返回"""
     model = model or MINIMAX_MODEL
