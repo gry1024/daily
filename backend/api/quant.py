@@ -8,29 +8,27 @@ router = APIRouter()
 # 静态路径必须放在动态路径 /{qid} 之前，否则会被吞掉
 @router.get("/today")
 def today(request: Request):
-    """今日题（不返回 answer / solution）"""
+    """今日多题（每天 5 题，覆盖不同类型 + 难度）"""
+    from datetime import date
+    today = date.today().isoformat()
     with get_conn() as conn:
-        row = conn.execute(
+        rows = conn.execute(
             """
-            SELECT q.id, q.source, q.difficulty, q.question_en, q.question_zh,
-                   q.tags, q.last_shown_at
+            SELECT q.id, q.category, q.sub_category, q.source, q.difficulty, q.difficulty_label,
+                   q.question_en, q.question_zh, q.tags, q.last_shown_at,
+                   q.solved_count, q.model_name, q.model_description_md,
+                   q.variations_md, q.insights_md, d.position
             FROM daily_quant d
             JOIN quant_questions q ON q.id = d.question_id
-            WHERE d.date = date('now','localtime')
-            """
-        ).fetchone()
-        if not row:
-            return {"today": None, "date": None}
+            WHERE d.date = ?
+            ORDER BY d.position
+            """,
+            (today,),
+        ).fetchall()
         return {
-            "date": row["last_shown_at"],
-            "question": {
-                "id": row["id"],
-                "source": row["source"],
-                "difficulty": row["difficulty"],
-                "question_en": row["question_en"],
-                "question_zh": row["question_zh"],
-                "tags": row["tags"],
-            },
+            "date": today,
+            "questions": [dict(r) for r in rows],
+            "count": len(rows),
         }
 
 
@@ -131,11 +129,13 @@ def random_one(
 
 @router.get("/{qid}")
 def detail(qid: int, request: Request):
-    """完整单题详情（含 problem / examples / constraints / hints）"""
+    """完整单题详情（含 problem / model / examples / constraints / hints / variations / insights）"""
     with get_conn() as conn:
         row = conn.execute(
-            """SELECT id, source, difficulty, question_en, question_zh, answer, solution_md,
-                      problem_md, examples_md, constraints_md, hints_md, tags
+            """SELECT id, category, sub_category, source, difficulty, difficulty_label,
+                      question_en, question_zh, answer, solution_md,
+                      problem_md, examples_md, constraints_md, hints_md, tags,
+                      model_name, model_description_md, variations_md, insights_md
                FROM quant_questions WHERE id=?""",
             (qid,),
         ).fetchone()
@@ -179,21 +179,32 @@ def hint(qid: int, n: int, request: Request):
 
 @router.get("/{qid}/related")
 def related(qid: int, request: Request, limit: int = 4):
-    """相关题（同 tag）"""
+    """相关题（同 category，难度相近）"""
     with get_conn() as conn:
-        row = conn.execute("SELECT tags FROM quant_questions WHERE id=?", (qid,)).fetchone()
+        row = conn.execute(
+            "SELECT category, difficulty FROM quant_questions WHERE id=?", (qid,)
+        ).fetchone()
         if not row:
             return {"items": []}
-        tags = row["tags"] or ""
-        # 取第一个 tag 匹配
-        first_tag = tags.split(",")[0].strip() if tags else ""
         rows = conn.execute(
-            """SELECT id, source, difficulty, question_zh, tags
+            """SELECT id, category, difficulty, difficulty_label, question_zh, source
                FROM quant_questions
-               WHERE id != ? AND tags LIKE ?
+               WHERE id != ? AND category = ?
+                 AND difficulty BETWEEN ? - 1 AND ? + 1
                ORDER BY RANDOM() LIMIT ?""",
-            (qid, f"%{first_tag}%", limit),
+            (qid, row["category"], row["difficulty"], row["difficulty"], limit),
         ).fetchall()
-        return {"items": [dict(r) for r in rows], "tag": first_tag}
+        return {"items": [dict(r) for r in rows], "category": row["category"]}
+
+
+@router.post("/{qid}/solve")
+def mark_solved(qid: int, request: Request):
+    """标记已掌握"""
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE quant_questions SET solved_count = solved_count + 1 WHERE id=?",
+            (qid,),
+        )
+    return {"ok": True}
 
 

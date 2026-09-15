@@ -114,9 +114,40 @@ function renderAnswer(module, qid, data) {
   return `
     <div class="answer-section" style="margin-top:16px">
       <h3>✅ 参考答案</h3>
-      <div style="padding:12px 16px;background:var(--bg);border-radius:var(--radius);font-family:var(--mono);font-size:1.067rem;color:var(--accent-blue)">
+      <div style="padding:14px 18px;background:linear-gradient(135deg, var(--bg) 0%, rgba(0,113,227,0.06) 100%);border-radius:var(--radius);font-family:var(--mono);font-size:1.133rem;color:var(--accent-blue);border-left:3px solid var(--accent-blue)">
         ${escapeHTML(data.answer)}
       </div>
+    </div>
+  `;
+}
+
+function renderModelSection(data) {
+  if (!data.model_name && !data.model_description_md) return '';
+  return `
+    <div class="model-section" style="margin-top:24px;padding:18px;background:var(--bg);border-radius:var(--radius);border-left:3px solid var(--success)">
+      <h3 style="margin-bottom:12px">🎓 背后模型</h3>
+      ${data.model_name ? `<div style="font-family:var(--font-serif);font-size:1.067rem;font-weight:500;color:var(--fg);margin-bottom:8px">${escapeHTML(data.model_name)}</div>` : ''}
+      ${data.model_description_md ? `<div class="markdown-body" style="font-size:0.933rem">${renderMarkdown(data.model_description_md)}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderVariations(md) {
+  if (!md) return '';
+  return `
+    <div class="variations-section" style="margin-top:24px">
+      <h3>🔀 类似题变种</h3>
+      <div class="markdown-body" style="font-size:0.933rem">${renderMarkdown(md)}</div>
+    </div>
+  `;
+}
+
+function renderInsights(md) {
+  if (!md) return '';
+  return `
+    <div class="insights-section" style="margin-top:24px;padding:16px 20px;background:rgba(255,149,0,0.04);border-radius:var(--radius);border-left:3px solid var(--warning)">
+      <h3 style="margin-bottom:12px">💡 关键洞察</h3>
+      <div class="markdown-body" style="font-size:0.933rem">${renderMarkdown(md)}</div>
     </div>
   `;
 }
@@ -125,14 +156,14 @@ function renderRelated(items) {
   if (!items || !items.length) return '';
   return `
     <div class="related-section" style="margin-top:24px">
-      <h3>🔗 同类题（${escapeHTML(items.tag || '')}）</h3>
+      <h3>🔗 同类题（${escapeHTML(items.category || '')}）</h3>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
         ${items.items.map(it => `
           <div class="list-item related-item" data-rid="${it.id}" style="cursor:pointer">
-            <div class="list-item-title" style="font-size:0.933rem">${escapeHTML(it.title_zh || it.title_en || '')}</div>
+            <div class="list-item-title" style="font-size:0.933rem">${escapeHTML(it.question_zh || '')}</div>
             <div class="list-item-meta">
-              <span class="badge ${it.difficulty === 'easy' ? 'diff-easy' : it.difficulty === 'medium' ? 'diff-medium' : 'diff-hard'}">${escapeHTML(it.difficulty || '')}</span>
-              ${it.tags ? escapeHTML((it.tags || '').split(',').slice(0,3).join(' · ')) : ''}
+              <span class="badge ${it.difficulty_label === 'Easy' ? 'badge-success' : it.difficulty_label === 'Medium' ? '' : 'badge-3'}">${escapeHTML(it.difficulty_label || '')}</span>
+              ${it.sub_category ? `<span class="badge">${escapeHTML(it.sub_category)}</span>` : ''}
             </div>
           </div>
         `).join('')}
@@ -229,8 +260,11 @@ export async function openProblemPage({ module, qid, onSolve, onNext }) {
       ${renderConstraints(data.constraints_md)}
       ${renderMyAnswer(qid, module, isQuant ? data.answer : null)}
       <div id="hint-mount"></div>
+      ${isQuant ? renderModelSection(data) : ''}
       ${renderSolution(module, qid, data)}
       ${isQuant ? renderAnswer(module, qid, data) : ''}
+      ${isQuant && data.insights_md ? renderInsights(data.insights_md) : ''}
+      ${isQuant && data.variations_md ? renderVariations(data.variations_md) : ''}
       ${renderRelated(related)}
     </div>
   `;

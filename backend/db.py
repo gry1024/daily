@@ -32,24 +32,36 @@ CREATE TABLE IF NOT EXISTS fetch_logs (
 -- ===== 模块 1: Quant =====
 CREATE TABLE IF NOT EXISTS quant_questions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  source TEXT,                  -- 'red_book' / 'green_book' / 'web'
-  difficulty INTEGER,           -- 1-5
+  category TEXT,                 -- 'probability' / 'brain_teaser' / 'math' / 'stats' / 'stochastic'
+  sub_category TEXT,            -- 'bayes' / 'combinatorics' / 'martingale' / 'random_walk' / 'expectation' ...
+  source TEXT,                  -- 'red_book' / 'green_book' / 'web' / 'interview' / 'classic'
+  difficulty INTEGER,           -- 1-5 (内部)
+  difficulty_label TEXT,        -- 'Easy' / 'Medium' / 'Hard' / 'Very Hard'
   question_en TEXT,
   question_zh TEXT,
-  answer TEXT,
-  solution_md TEXT,
-  problem_md TEXT,              -- 完整题目（markdown，含示例/约束）
-  examples_md TEXT,             -- 示例（markdown）
-  constraints_md TEXT,          -- 约束（markdown）
-  hints_md TEXT,                -- 3 个提示，用 |HINT_N| 分隔
-  tags TEXT,
+  answer TEXT,                  -- 简短答案
+  problem_md TEXT,              -- 完整题目（markdown）
+  examples_md TEXT,             -- 示例
+  constraints_md TEXT,          -- 约束
+  hints_md TEXT,                -- 3 个渐进提示，|HINT_N| 分隔
+  tags TEXT,                    -- 逗号分隔
+  -- 新增：完整学习内容
+  model_name TEXT,              -- 背后模型名称（如「Coupon Collector Problem」）
+  model_description_md TEXT,    -- 模型简介 + 公式
+  variations_md TEXT,           -- 类似题变种列表
+  insights_md TEXT,             -- 关键洞察
+  -- 统计
+  shown_count INTEGER DEFAULT 0,
+  solved_count INTEGER DEFAULT 0,
   last_shown_at DATE,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS daily_quant (
-  date TEXT PRIMARY KEY,
-  question_id INTEGER REFERENCES quant_questions(id)
+  date TEXT,
+  position INTEGER,              -- 1-5 在当天的位置
+  question_id INTEGER REFERENCES quant_questions(id),
+  PRIMARY KEY (date, question_id)
 );
 
 -- ===== 模块 2: AI News =====
