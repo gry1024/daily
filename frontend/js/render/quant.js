@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { escapeHTML } from './app.js';
+import { escapeHTML } from '../app.js';
 import { store } from '../state.js';
 import { toast } from '../toast.js';
 import { openProblemPage } from '../problem-view.js';

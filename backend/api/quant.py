@@ -44,8 +44,8 @@ def stats(request: Request):
         ).fetchall()
         by_difficulty = conn.execute(
             """
-            SELECT difficulty, COUNT(*) AS n
-            FROM quant_questions GROUP BY difficulty ORDER BY difficulty
+            SELECT difficulty_label, COUNT(*) AS n
+            FROM quant_questions GROUP BY difficulty_label ORDER BY difficulty_label
             """
         ).fetchall()
         total = conn.execute("SELECT COUNT(*) FROM quant_questions").fetchone()[0]
@@ -78,11 +78,15 @@ def list_questions(
     request: Request,
     source: str = Query(None),
     difficulty: int = Query(None),
+    difficulty_label: str = Query(None),
     tag: str = Query(None),
-    limit: int = Query(50, le=200),
+    category: str = Query(None),
+    limit: int = Query(200, le=500),
 ):
     """题库列表（用于"浏览全部"）"""
-    sql = "SELECT id, source, difficulty, question_zh, question_en, tags, last_shown_at FROM quant_questions WHERE 1=1"
+    sql = """SELECT id, category, sub_category, source, difficulty, difficulty_label,
+                      question_zh, question_en, tags, last_shown_at
+               FROM quant_questions WHERE 1=1"""
     params = []
     if source:
         sql += " AND source = ?"
@@ -90,6 +94,12 @@ def list_questions(
     if difficulty:
         sql += " AND difficulty = ?"
         params.append(difficulty)
+    if difficulty_label:
+        sql += " AND difficulty_label = ?"
+        params.append(difficulty_label)
+    if category:
+        sql += " AND category = ?"
+        params.append(category)
     if tag:
         sql += " AND tags LIKE ?"
         params.append(f"%{tag}%")
