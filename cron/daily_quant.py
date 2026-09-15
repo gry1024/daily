@@ -15,53 +15,52 @@ from backend.runtime import run_with_logging
 
 
 def pick_today(log):
-    today = today_str()
-    week_ago = (today - timedelta(days=7)).isoformat() if False else None
-    # 用字符串比较简化
+    """每天选 1 道题（覆盖不同类别 + 难度均衡）"""
     from datetime import date, timedelta
+    today = today_str()
     d = date.fromisoformat(today)
-    week_ago = (d - timedelta(days=7)).isoformat()
+    week_ago = (d - timedelta(days=30)).isoformat()
 
     with get_conn() as conn:
-        # 选 last_shown_at 最早 + 7 天内未展示 + 优先有 problem_md 的
-        row = conn.execute(
-            """
-            SELECT q.id FROM quant_questions q
-            WHERE q.id NOT IN (
-              SELECT question_id FROM daily_quant
-              WHERE date >= ?
-            )
-            AND length(q.problem_md) > 30
-            ORDER BY q.last_shown_at ASC NULLS FIRST, RANDOM()
-            LIMIT 1
-            """,
-            (week_ago,),
-        ).fetchone()
-        if not row:
-            # 退而求其次：随便选（但仍然要 problem_md > 30）
+        # 优先选 category 过去 30 天没出现过的题
+        for cat in ['probability', 'brain_teaser', 'math', 'stats', 'stochastic']:
             row = conn.execute(
-                """SELECT id FROM quant_questions
-                   WHERE length(problem_md) > 30
-                   ORDER BY RANDOM() LIMIT 1"""
+                """
+                SELECT q.id FROM quant_questions q
+                WHERE q.category = ?
+                  AND length(q.problem_md) > 30
+                  AND q.id NOT IN (
+                    SELECT question_id FROM daily_quant
+                    WHERE date >= ?
+                  )
+                ORDER BY q.last_shown_at ASC NULLS FIRST, RANDOM()
+                LIMIT 1
+                """,
+                (cat, week_ago),
             ).fetchone()
-        qid = row["id"]
+            if row:
+                qid = row["id"]
+                conn.execute(
+                    "INSERT OR REPLACE INTO daily_quant (date, question_id) VALUES (?, ?)",
+                    (today, qid),
+                )
+                conn.execute(
+                    "UPDATE quant_questions SET last_shown_at = ? WHERE id = ?",
+                    (today, qid),
+                )
+                log.info(f"今日 quant = id {qid} ({cat})")
+                return {"fetched": 0, "inserted": 1, "skipped": 0}
 
-        # 检查是否已选
-        existing = conn.execute(
-            "SELECT question_id FROM daily_quant WHERE date = ?", (today,)
+        # 兜底
+        row = conn.execute(
+            "SELECT id FROM quant_questions ORDER BY RANDOM() LIMIT 1"
         ).fetchone()
-        if existing and existing["question_id"] == qid:
-            return {"fetched": 0, "inserted": 0, "skipped": 1}
-
+        qid = row["id"]
         conn.execute(
             "INSERT OR REPLACE INTO daily_quant (date, question_id) VALUES (?, ?)",
             (today, qid),
         )
-        conn.execute(
-            "UPDATE quant_questions SET last_shown_at = ? WHERE id = ?",
-            (today, qid),
-        )
-        log.info(f"今日题 = quant id {qid}")
+        log.info(f"今日 quant (兜底) = id {qid}")
         return {"fetched": 0, "inserted": 1, "skipped": 0}
 
 

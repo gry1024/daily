@@ -49,72 +49,54 @@ def import_questions():
 
 
 def pick_daily(date):
-    """每天选 5 题：保证 5 个 category 都有 + 难度均衡"""
+    """每天选 1 道题（覆盖不同类别 + 难度均衡，30 天内不重复）"""
     with get_conn() as conn:
         # 先清掉今日
         conn.execute("DELETE FROM daily_quant WHERE date = ?", (date,))
 
-        # 策略：先选最缺的 category
+        # 优先选 category 过去 5 天没出现过的题
         categories = ['probability', 'brain_teaser', 'math', 'stats', 'stochastic']
-        difficulties = ['Easy', 'Medium', 'Hard', 'Very Hard']
-
-        selected_ids = []
-
         for cat in categories:
-            # 选这个 category 最近最少出现的
             row = conn.execute(
                 """SELECT id FROM quant_questions
                    WHERE category = ?
                      AND id NOT IN (
                        SELECT question_id FROM daily_quant
-                       WHERE date >= date(?, '-7 day')
+                       WHERE date >= date(?, '-30 day')
                      )
                    ORDER BY last_shown_at ASC NULLS FIRST, RANDOM()
                    LIMIT 1""",
                 (cat, date),
             ).fetchone()
             if row:
-                selected_ids.append(row["id"])
+                qid = row["id"]
+                conn.execute(
+                    "INSERT OR REPLACE INTO daily_quant (date, position, question_id) VALUES (?, 1, ?)",
+                    (date, qid),
+                )
+                conn.execute(
+                    "UPDATE quant_questions SET last_shown_at = ?, shown_count = shown_count + 1 WHERE id = ?",
+                    (date, qid),
+                )
+                print(f"✓ {date} 今日题: id={qid} cat={cat}")
+                # 显示摘要
+                row2 = conn.execute(
+                    "SELECT question_zh, difficulty_label, model_name FROM quant_questions WHERE id = ?",
+                    (qid,),
+                ).fetchone()
+                print(f"  [{row2['difficulty_label']}] {row2['question_zh'][:50]}")
+                print(f"  背后模型: {row2['model_name']}")
+                return
 
-        # 兜底：如果某 category 找不到新的，从未出现的题目里随机抽
-        while len(selected_ids) < 5:
-            row = conn.execute(
-                """SELECT id FROM quant_questions
-                   WHERE id NOT IN (
-                     SELECT question_id FROM daily_quant
-                     WHERE date >= date(?, '-1 day')
-                   )
-                   AND id NOT IN ({})
-                   ORDER BY RANDOM() LIMIT 1""".format(
-                     ','.join('?' * len(selected_ids))
-                   ),
-                (date, *selected_ids),
-            ).fetchone()
-            if not row: break
-            selected_ids.append(row["id"])
-
-        # 写入
-        for pos, qid in enumerate(selected_ids, 1):
+        # 兜底
+        row = conn.execute(
+            """SELECT id FROM quant_questions ORDER BY RANDOM() LIMIT 1"""
+        ).fetchone()
+        if row:
             conn.execute(
-                "INSERT INTO daily_quant (date, position, question_id) VALUES (?, ?, ?)",
-                (date, pos, qid),
+                "INSERT OR REPLACE INTO daily_quant (date, position, question_id) VALUES (?, 1, ?)",
+                (date, row["id"]),
             )
-            conn.execute(
-                "UPDATE quant_questions SET last_shown_at = ?, shown_count = shown_count + 1 WHERE id = ?",
-                (date, qid),
-            )
-
-        print(f"✓ {date} 选题: {[i for i in selected_ids]}（{len(selected_ids)} 题）")
-
-        # 显示题目摘要
-        rows = conn.execute(
-            f"""SELECT q.id, q.category, q.sub_category, q.difficulty_label, q.question_zh
-               FROM quant_questions q
-               WHERE q.id IN ({','.join('?'*len(selected_ids))})""",
-            selected_ids,
-        ).fetchall()
-        for r in rows:
-            print(f"  [{r['id']:2d}] {r['category']:14s}/{r['difficulty_label']:10s} | {r['question_zh'][:50]}")
 
 
 if __name__ == "__main__":

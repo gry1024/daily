@@ -8,25 +8,47 @@ function diffClass(d) {
   return d === 'easy' ? 'diff-easy' : d === 'medium' ? 'diff-medium' : 'diff-hard';
 }
 
-function renderStatsCard(stats, solvedCount) {
-  const pct = stats.total ? Math.round((solvedCount / stats.total) * 100) : 0;
+function renderStats(dailyQuestion, totalQ, solvedCount) {
   const streak = store.getStreak('leetcode');
   return `
     <div class="stat-group">
       <div class="stat-card">
-        <div class="stat-label">累计掌握</div>
-        <div class="stat-value">${solvedCount}<span style="font-size:0.933rem;color:var(--fg-tertiary);margin-left:4px">/ ${stats.total}</span></div>
-        <div class="progress-bar success"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+        <div class="stat-label">今日一题</div>
+        <div class="stat-value" style="color:var(--accent-blue);font-size:1.4rem">${dailyQuestion ? `LC ${dailyQuestion.lc_id}` : '—'}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">连续刷题</div>
-        <div class="stat-value" style="color:${streak > 0 ? 'var(--accent-blue)' : 'var(--fg-secondary)'}">${streak}<span style="font-size:0.933rem">天</span></div>
+        <div class="stat-label">已掌握</div>
+        <div class="stat-value">${solvedCount}<span style="font-size:0.933rem;color:var(--fg-tertiary);margin-left:4px">/ ${totalQ}</span></div>
+        <div class="progress-bar success"><div class="progress-bar-fill" style="width:${Math.round(solvedCount/totalQ*100)}%"></div></div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">难度分布</div>
-        <div style="margin-top:6px;font-family:var(--font-sans);font-size:0.8rem">
-          ${stats.by_difficulty.map(d => `<span class="badge ${diffClass(d.difficulty)}">${d.difficulty} ${d.n}</span>`).join(' ')}
-        </div>
+        <div class="stat-label">连击</div>
+        <div class="stat-value">${streak}<span style="font-size:0.933rem"> 天</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDailyPick(q) {
+  const tagHtml = (q.tags || '').split(',').filter(Boolean).slice(0, 5).map(t =>
+    `<span class="badge">${escapeHTML(t.trim())}</span>`).join('');
+  return `
+    <div class="q-card problem-card" data-qid="${q.id}" style="cursor:pointer;position:relative;border:2px solid var(--accent-blue);background:rgba(0,113,227,0.02)">
+      <div style="position:absolute;top:0;left:0;background:var(--accent-blue);color:#fff;font-size:0.733rem;padding:2px 10px;border-radius:0 0 var(--radius) 0;letter-spacing:0.04em">⭐ 今日一题</div>
+      <div class="card-actions" style="position:absolute;top:8px;right:8px;z-index:2">
+        <button class="vocab-btn ${store.completed.has('leetcode', q.id) ? 'on' : ''}" data-mark-solved="${q.id}" title="标记掌握">
+          ${store.completed.has('leetcode', q.id) ? '✓ 已掌握' : '○ 标记'}
+        </button>
+      </div>
+      <div class="q-meta" style="margin-top:20px;padding-right:90px">
+        <span class="badge">Hot 100 #${q.order_in_hot100 || q.lc_id}</span>
+        <span class="badge ${diffClass(q.difficulty)}">${escapeHTML(q.difficulty)}</span>
+        ${tagHtml}
+      </div>
+      <div class="q-body" style="font-weight:500;font-size:1.067rem">${escapeHTML(q.title_zh || q.title_en || '')}</div>
+      <div class="q-body-en" style="color:var(--fg-secondary);font-size:0.9rem">${escapeHTML(q.title_en || '')}</div>
+      <div class="q-actions" style="margin-top:12px;color:var(--accent-blue);font-size:0.867rem;font-family:var(--font-sans)">
+        👉 点击查看完整描述 / 示例 / 约束 / 提示 / 题解
       </div>
     </div>
   `;
@@ -35,109 +57,145 @@ function renderStatsCard(stats, solvedCount) {
 function renderFilters(stats) {
   return `
     <div class="filter-bar">
+      <span style="color:var(--fg-secondary);font-size:0.867rem">难度：</span>
       <button class="filter-chip ${currentFilter.difficulty === '' ? 'active' : ''}" data-fdiff="">全部</button>
-      <button class="filter-chip ${currentFilter.difficulty === 'easy' ? 'active' : ''}" data-fdiff="easy"><span class="diff-easy">Easy</span></button>
-      <button class="filter-chip ${currentFilter.difficulty === 'medium' ? 'active' : ''}" data-fdiff="medium"><span class="diff-medium">Medium</span></button>
-      <button class="filter-chip ${currentFilter.difficulty === 'hard' ? 'active' : ''}" data-fdiff="hard"><span class="diff-hard">Hard</span></button>
-      <span style="margin:0 4px;color:var(--fg-tertiary)">·</span>
-      <button class="filter-chip ${currentFilter.tag === '' ? 'active' : ''}" data-ftag="">热门标签</button>
-      ${stats.top_tags.slice(0, 8).map(t => `<button class="filter-chip ${currentFilter.tag === t.tag ? 'active' : ''}" data-ftag="${escapeHTML(t.tag)}">${escapeHTML(t.tag)}</button>`).join('')}
+      <button class="filter-chip ${currentFilter.difficulty === 'easy' ? 'active' : ''}" data-fdiff="easy"><span class="diff-easy">Easy</span> (${stats.by_difficulty.find(d => d.difficulty === 'easy')?.n || 0})</button>
+      <button class="filter-chip ${currentFilter.difficulty === 'medium' ? 'active' : ''}" data-fdiff="medium"><span class="diff-medium">Medium</span> (${stats.by_difficulty.find(d => d.difficulty === 'medium')?.n || 0})</button>
+      <button class="filter-chip ${currentFilter.difficulty === 'hard' ? 'active' : ''}" data-fdiff="hard"><span class="diff-hard">Hard</span> (${stats.by_difficulty.find(d => d.difficulty === 'hard')?.n || 0})</button>
+      <span style="margin:0 8px;color:var(--fg-tertiary)">·</span>
+      <span style="color:var(--fg-secondary);font-size:0.867rem">标签：</span>
+      <button class="filter-chip ${currentFilter.tag === '' ? 'active' : ''}" data-ftag="">热门</button>
+      ${stats.top_tags.slice(0, 8).map(t =>
+        `<button class="filter-chip ${currentFilter.tag === t.tag ? 'active' : ''}" data-ftag="${escapeHTML(t.tag)}">${escapeHTML(t.tag)} (${t.n})</button>`
+      ).join('')}
     </div>
   `;
 }
 
-function renderQuestion(q, isSolved) {
-  const tagHtml = (q.tags || '').split(',').filter(Boolean).slice(0, 5).map(t =>
+function renderBankCard(q) {
+  const tagHtml = (q.tags || '').split(',').filter(Boolean).slice(0, 3).map(t =>
     `<span class="badge">${escapeHTML(t.trim())}</span>`).join('');
-  // 取 description 摘要
-  const summary = q.description_md
-    ? q.description_md.replace(/[*_`#]/g, '').slice(0, 120).trim() + '...'
-    : '';
+  const isSolved = store.completed.has('leetcode', q.id);
   return `
-    <div class="q-card problem-card" data-qid="${q.id}" style="cursor:pointer">
+    <div class="q-card problem-card" data-qid="${q.id}" style="cursor:pointer;position:relative;padding:14px 18px">
+      <div class="card-actions" style="position:absolute;top:6px;right:6px;z-index:2">
+        <button class="action-btn ${isSolved ? 'active' : ''}" data-mark-solved="${q.id}" title="标记掌握">
+          ${isSolved ? '✓' : '○'}
+        </button>
+      </div>
       <div class="q-meta">
-        <span class="badge">Hot 100 #${q.order_in_hot100 || q.lc_id}</span>
-        <span class="badge ${diffClass(q.difficulty)}">${escapeHTML(q.difficulty || '')}</span>
+        <span class="badge">#${q.order_in_hot100 || q.lc_id}</span>
+        <span class="badge ${diffClass(q.difficulty)}">${escapeHTML(q.difficulty)}</span>
         ${tagHtml}
-        ${isSolved ? '<span class="item-status" style="color:var(--success)">✓ 已掌握</span>' : ''}
       </div>
-      <div class="q-body" style="font-weight:500">${escapeHTML(q.title_zh || q.title_en || '')}</div>
-      ${summary ? `<div class="q-body-en" style="color:var(--fg-secondary);font-size:0.9rem;margin-top:6px">${escapeHTML(summary)}</div>` : ''}
-      <div class="q-actions" style="margin-top:14px;color:var(--accent-blue);font-size:0.9rem;font-family:var(--font-sans)">
-        👉 点击卡片打开完整题目（描述 + 示例 + 约束 + 3 个提示 + 题解）
-      </div>
+      <div class="q-body" style="font-weight:500;font-size:0.933rem;padding-right:24px">${escapeHTML(q.title_zh || q.title_en || '')}</div>
     </div>
   `;
 }
 
 let currentFilter = { difficulty: '', tag: '' };
-let _container = null;
+let _dailyQuestion = null;
 
-async function renderQuestionCardWithClick(container, q) {
-  const isSolved = store.completed.has('leetcode', q.id);
-  container.querySelector('.q-current').innerHTML = renderQuestion(q, isSolved);
-  container.querySelector('.q-card').addEventListener('click', async () => {
-    await openProblemPage({
-      module: 'leetcode',
-      qid: q.id,
-      onSolve: () => {
-        renderStats(container);
-        renderQuestionCardWithClick(container, q);
-      },
-      onNext: async () => {
-        try {
-          const params = new URLSearchParams({ exclude: q.id });
-          if (currentFilter.difficulty) params.set('difficulty', currentFilter.difficulty);
-          if (currentFilter.tag) params.set('tag', currentFilter.tag);
-          const r = await api.get(`/leetcode/random?${params}`);
-          if (r.question) {
-            await renderQuestionCardWithClick(container, r.question);
-          } else {
-            toast.info('当前筛选下无题');
-          }
-        } catch (e) {
-          toast.error('换题失败');
-        }
-      },
+async function render(container) {
+  container.innerHTML = `
+    <div class="q-stats"></div>
+    <div class="q-daily"></div>
+    <div class="q-bank-filters"></div>
+    <h2 style="font-family:var(--font-serif);font-size:1.4rem;margin:32px 0 12px;color:var(--fg)">📚 完整题库（Hot 100）</h2>
+    <div class="q-bank-list"></div>
+  `;
+  try {
+    const [today, stats, browse] = await Promise.all([
+      api.get('/leetcode/today'),
+      api.get('/leetcode/stats'),
+      api.get('/leetcode/list?limit=200'),
+    ]);
+    _dailyQuestion = today.question || null;
+    let allQs = browse.items || [];
+    const solvedCount = new Set(store.completed.list('leetcode').map(([id]) => +id)).size;
+
+    container.querySelector('.q-stats').innerHTML = renderStats(_dailyQuestion, stats.total, solvedCount);
+    container.querySelector('.q-daily').innerHTML = _dailyQuestion
+      ? renderDailyPick(_dailyQuestion)
+      : '<div class="empty-state">今日题尚未发布</div>';
+
+    container.querySelector('.q-bank-filters').innerHTML = renderFilters(stats);
+
+    bindEvents(container, allQs);
+    filterAndRender(container, allQs);
+  } catch (e) {
+    container.innerHTML = `<div class="flash error">加载失败：${escapeHTML(e.message)}</div>`;
+  }
+}
+
+function filterAndRender(container, allQs) {
+  let items = allQs;
+  if (currentFilter.difficulty) items = items.filter(q => q.difficulty === currentFilter.difficulty);
+  if (currentFilter.tag) items = items.filter(q => q.tags && q.tags.split(',').map(t => t.trim()).includes(currentFilter.tag));
+  const listEl = container.querySelector('.q-bank-list');
+  listEl.innerHTML = items.length
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:10px">${items.map(renderBankCard).join('')}</div>`
+    : `<div class="empty-state">无匹配题目</div>`;
+
+  listEl.querySelectorAll('.problem-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('[data-mark-solved]')) return;
+      openProblemPage({ module: 'leetcode', qid: +card.dataset.qid, onSolve: () => render(_container) });
+    });
+  });
+  listEl.querySelectorAll('[data-mark-solved]').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = +b.dataset.markSolved;
+      if (store.completed.has('leetcode', id)) {
+        store.completed.remove('leetcode', id);
+        toast.info('已取消');
+      } else {
+        store.completed.add('leetcode', id);
+        toast.success('✓ 已掌握');
+      }
+      render(_container);
     });
   });
 }
 
-async function renderStats(container) {
-  const stats = await api.get('/leetcode/stats');
-  const solvedCount = new Set(store.completed.list('leetcode').map(([id]) => +id)).size;
-  container.querySelector('.lc-stats').innerHTML = renderStatsCard(stats, solvedCount);
+let _container = null;
+function bindEvents(container, allQs) {
+  container.querySelectorAll('[data-fdiff]').forEach(b => {
+    b.addEventListener('click', () => {
+      currentFilter.difficulty = b.dataset.fdiff || '';
+      filterAndRender(container, allQs);
+    });
+  });
+  container.querySelectorAll('[data-ftag]').forEach(b => {
+    b.addEventListener('click', () => {
+      currentFilter.tag = b.dataset.ftag || '';
+      filterAndRender(container, allQs);
+    });
+  });
+
+  const dailyCard = container.querySelector('.q-daily .problem-card');
+  if (dailyCard) {
+    dailyCard.addEventListener('click', (e) => {
+      if (e.target.closest('[data-mark-solved]')) return;
+      openProblemPage({ module: 'leetcode', qid: +dailyCard.dataset.qid, onSolve: () => render(container) });
+    });
+    dailyCard.querySelector('[data-mark-solved]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = +e.currentTarget.dataset.markSolved;
+      if (store.completed.has('leetcode', id)) {
+        store.completed.remove('leetcode', id);
+        toast.info('已取消');
+      } else {
+        store.completed.add('leetcode', id);
+        toast.success('✓ 已掌握');
+      }
+      render(container);
+    });
+  }
 }
 
 export async function renderLeetcode(container) {
   _container = container;
-  container.innerHTML = `
-    <div class="lc-stats"></div>
-    <div class="lc-filters"></div>
-    <div class="q-current"></div>
-    <div class="q-related"></div>
-  `;
-  try {
-    const [data, stats] = await Promise.all([
-      api.get('/leetcode/today'),
-      api.get('/leetcode/stats'),
-    ]);
-    container.querySelector('.lc-filters').innerHTML = renderFilters(stats);
-    await renderStats(container);
-
-    if (!data || !data.question) {
-      container.querySelector('.q-current').innerHTML = `<div class="empty-state">今日题尚未发布</div>`;
-      return;
-    }
-    await renderQuestionCardWithClick(container, data.question);
-
-    container.querySelectorAll('[data-fdiff]').forEach(b => {
-      b.addEventListener('click', () => { currentFilter.difficulty = b.dataset.fdiff; renderLeetcode(container); });
-    });
-    container.querySelectorAll('[data-ftag]').forEach(b => {
-      b.addEventListener('click', () => { currentFilter.tag = b.dataset.ftag; renderLeetcode(container); });
-    });
-  } catch (e) {
-    container.innerHTML = `<div class="flash error">加载失败：${escapeHTML(e.message)}</div>`;
-  }
+  await render(container);
 }
