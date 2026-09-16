@@ -261,8 +261,8 @@ def init_schema():
 
 
 def now_str() -> str:
-    """ISO 格式的当前时间（带时区）"""
-    return datetime.now(_tz).isoformat()
+    """本地时间（无时区）— SQLite date() 兼容"""
+    return datetime.now(_tz).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def today_str() -> str:

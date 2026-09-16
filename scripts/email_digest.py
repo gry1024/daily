@@ -47,7 +47,7 @@ def fetch_today_summary():
             log_row = conn.execute(
                 """
                 SELECT status, items_fetched, items_inserted, error, finished_at
-                FROM fetch_logs WHERE module=? AND date(finished_at)=?
+                FROM fetch_logs WHERE module=? AND substr(finished_at, 1, 10)=?
                 ORDER BY datetime(finished_at) DESC LIMIT 1
                 """,
                 (mod, today),
