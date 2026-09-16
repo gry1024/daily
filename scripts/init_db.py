@@ -11,11 +11,17 @@ sys.path.insert(0, str(ROOT))
 from backend.db import init_schema, db_cursor, today_str, in_days
 
 
+def _table_empty(conn, table):
+    return conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"] == 0
+
+
 def seed_leetcode():
     path = ROOT / "data" / "seeds" / "leetcode_hot100.json"
     items = json.loads(path.read_text())
     with db_cursor() as conn:
-        conn.execute("DELETE FROM leetcode_questions")
+        if not _table_empty(conn, "leetcode_questions"):
+            print("  LeetCode: 已有数据，跳过")
+            return
         conn.executemany(
             """
             INSERT INTO leetcode_questions
@@ -44,7 +50,9 @@ def seed_quant():
     path = ROOT / "data" / "seeds" / "quant_questions.json"
     items = json.loads(path.read_text())
     with db_cursor() as conn:
-        conn.execute("DELETE FROM quant_questions")
+        if not _table_empty(conn, "quant_questions"):
+            print("  Quant: 已有数据，跳过")
+            return
         conn.executemany(
             """
             INSERT INTO quant_questions
@@ -251,7 +259,9 @@ def seed_english_words():
         ("canonical", "TOEFL", "/kəˈnɒnɪkl/", "standardized", "Canonical reference implementation."),
     ]
     with db_cursor() as conn:
-        conn.execute("DELETE FROM english_words")
+        if not _table_empty(conn, "english_words"):
+            print("  English words: 已有数据，跳过")
+            return
         conn.executemany(
             """
             INSERT OR IGNORE INTO english_words
@@ -272,7 +282,7 @@ def seed_today():
         ).fetchone()
         if row:
             conn.execute(
-                "INSERT OR REPLACE INTO daily_leetcode (date, question_id) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO daily_leetcode (date, question_id) VALUES (?, ?)",
                 (today_str(), row["id"]),
             )
             print(f"  daily_leetcode: 首日 → {row['id']}")
@@ -281,7 +291,7 @@ def seed_today():
         row = conn.execute("SELECT id FROM quant_questions ORDER BY id LIMIT 1").fetchone()
         if row:
             conn.execute(
-                "INSERT OR REPLACE INTO daily_quant (date, question_id) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO daily_quant (date, question_id) VALUES (?, ?)",
                 (today_str(), row["id"]),
             )
             print(f"  daily_quant: 首日 → {row['id']}")
