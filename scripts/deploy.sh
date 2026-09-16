@@ -33,7 +33,7 @@ crontab -l | grep daily
 
 echo "=== [6/6] verify ==="
 sleep 2
-curl -s http://127.0.0.1:8001/api/health
+curl -s http://127.0.0.1:8002/api/health
 echo ""
 echo "=== nginx hint ==="
 echo "记得手动把 nginx/daily.conf.snippet 插入到 /etc/nginx/sites-enabled/treehole"
