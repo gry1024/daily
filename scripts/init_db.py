@@ -274,27 +274,33 @@ def seed_english_words():
 
 
 def seed_today():
-    """灌入首次 daily_leetcode / daily_quant"""
+    """灌入首次 daily_leetcode / daily_quant（当天已有记录则跳过）"""
     with db_cursor() as conn:
         # LeetCode: 选 lc_id = 1（两数之和）作为首日
-        row = conn.execute(
-            "SELECT id FROM leetcode_questions WHERE order_in_hot100 = 1"
-        ).fetchone()
-        if row:
-            conn.execute(
-                "INSERT OR IGNORE INTO daily_leetcode (date, question_id) VALUES (?, ?)",
-                (today_str(), row["id"]),
-            )
-            print(f"  daily_leetcode: 首日 → {row['id']}")
+        if not conn.execute(
+            "SELECT 1 FROM daily_leetcode WHERE date = ?", (today_str(),)
+        ).fetchone():
+            row = conn.execute(
+                "SELECT id FROM leetcode_questions WHERE order_in_hot100 = 1"
+            ).fetchone()
+            if row:
+                conn.execute(
+                    "INSERT INTO daily_leetcode (date, question_id) VALUES (?, ?)",
+                    (today_str(), row["id"]),
+                )
+                print(f"  daily_leetcode: 首日 → {row['id']}")
 
         # Quant: 选第一道
-        row = conn.execute("SELECT id FROM quant_questions ORDER BY id LIMIT 1").fetchone()
-        if row:
-            conn.execute(
-                "INSERT OR IGNORE INTO daily_quant (date, question_id) VALUES (?, ?)",
-                (today_str(), row["id"]),
-            )
-            print(f"  daily_quant: 首日 → {row['id']}")
+        if not conn.execute(
+            "SELECT 1 FROM daily_quant WHERE date = ?", (today_str(),)
+        ).fetchone():
+            row = conn.execute("SELECT id FROM quant_questions ORDER BY id LIMIT 1").fetchone()
+            if row:
+                conn.execute(
+                    "INSERT INTO daily_quant (date, position, question_id) VALUES (?, 1, ?)",
+                    (today_str(), row["id"]),
+                )
+                print(f"  daily_quant: 首日 → {row['id']}")
 
 
 def main():
