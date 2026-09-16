@@ -107,6 +107,26 @@ function renderBankCard(q) {
 let currentFilter = { difficulty: '', category: '' };
 let _dailyQuestion = null;
 
+function openQuantProblem(qid, refresh) {
+  openProblemPage({
+    module: 'quant',
+    qid,
+    onSolve: refresh,
+    onNext: async () => {
+      try {
+        const res = await api.get(`/quant/random?exclude=${qid}`, { cache: false });
+        if (res.question) {
+          openQuantProblem(res.question.id, refresh);
+        } else {
+          toast.info('没有更多可换的题了');
+        }
+      } catch (e) {
+        toast.error(`换题失败：${e.message}`);
+      }
+    },
+  });
+}
+
 async function render(container) {
   container.innerHTML = `
     <div class="q-stats"></div>
@@ -151,7 +171,7 @@ function filterAndRender(container, allQs) {
   listEl.querySelectorAll('.problem-card').forEach(card => {
     card.addEventListener('click', (e) => {
       if (e.target.closest('[data-mark-solved]')) return;
-      openProblemPage({ module: 'quant', qid: +card.dataset.qid, onSolve: () => render(_container) });
+      openQuantProblem(+card.dataset.qid, () => render(_container));
     });
   });
   listEl.querySelectorAll('[data-mark-solved]').forEach(b => {
@@ -191,7 +211,7 @@ function bindEvents(container, allQs) {
   if (dailyCard) {
     dailyCard.addEventListener('click', (e) => {
       if (e.target.closest('[data-mark-solved]')) return;
-      openProblemPage({ module: 'quant', qid: +dailyCard.dataset.qid, onSolve: () => render(container) });
+      openQuantProblem(+dailyCard.dataset.qid, () => render(container));
     });
     dailyCard.querySelector('[data-mark-solved]')?.addEventListener('click', (e) => {
       e.stopPropagation();

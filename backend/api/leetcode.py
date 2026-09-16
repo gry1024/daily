@@ -18,7 +18,7 @@ def today(request: Request):
             """
         ).fetchone()
         if not row:
-            return {"today": None}
+            return {"question": None}
         return {"question": dict(row)}
 
 

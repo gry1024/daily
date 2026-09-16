@@ -41,7 +41,7 @@ def pick_today(log):
             if row:
                 qid = row["id"]
                 conn.execute(
-                    "INSERT OR REPLACE INTO daily_quant (date, question_id) VALUES (?, ?)",
+                    "INSERT OR REPLACE INTO daily_quant (date, position, question_id) VALUES (?, 1, ?)",
                     (today, qid),
                 )
                 conn.execute(
@@ -57,7 +57,7 @@ def pick_today(log):
         ).fetchone()
         qid = row["id"]
         conn.execute(
-            "INSERT OR REPLACE INTO daily_quant (date, question_id) VALUES (?, ?)",
+            "INSERT OR REPLACE INTO daily_quant (date, position, question_id) VALUES (?, 1, ?)",
             (today, qid),
         )
         log.info(f"今日 quant (兜底) = id {qid}")

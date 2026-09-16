@@ -65,7 +65,6 @@ function renderHintBtns(hintsRaw, module, qid, hintsShown) {
       ${[1,2,3].map(n => {
         if (!hints[n-1]) return '';
         const visible = hintsShown.has(n);
-        const next = hints[n-1 === 3 ? null : n];
         return `<div class="hint-card ${visible ? 'shown' : 'hidden'}">
           <div class="hint-header" data-hint-toggle="${n}">
             <span class="hint-num">提示 ${n}</span>
@@ -224,7 +223,7 @@ export async function openProblemPage({ module, qid, onSolve, onNext }) {
   // badges
   const badges = [];
   if (module === 'leetcode') {
-    badges.push(`<span class="badge Hot 100">Hot 100 #${data.order_in_hot100 || data.lc_id}</span>`);
+    badges.push(`<span class="badge badge-hot100">Hot 100 #${data.order_in_hot100 || data.lc_id}</span>`);
     if (data.difficulty) {
       const cls = `diff-${data.difficulty}`;
       badges.push(`<span class="badge ${cls}">${escapeHTML(data.difficulty)}</span>`);
